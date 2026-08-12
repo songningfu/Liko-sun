@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -48,5 +48,27 @@ class SourceItem(BaseModel):
     department: str | None = None
     published_at: str | None = Field(default=None, alias="publishedAt")
     last_verified_at: str | None = Field(default=None, alias="lastVerifiedAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class MemoryUpdateRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=2000)
+
+    @field_validator("text")
+    @classmethod
+    def strip_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("text cannot be blank")
+        return value
+
+
+class MemoryItemResponse(BaseModel):
+    id: str
+    text: str
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str | None = Field(default=None, alias="createdAt")
+    updated_at: str | None = Field(default=None, alias="updatedAt")
 
     model_config = {"populate_by_name": True}

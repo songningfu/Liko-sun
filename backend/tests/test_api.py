@@ -2,9 +2,11 @@ import json
 
 from fastapi.testclient import TestClient
 
+from app.auth import CurrentUser, get_current_user
 from app.config import Settings, get_settings
 from app.fastgpt import FastGPTEvent
 from app.main import app, get_fastgpt_client
+from app.memory import MemoryRecord, get_memory_store
 
 
 client = TestClient(app)
@@ -26,6 +28,7 @@ def test_health_reports_unconfigured_integrations() -> None:
     assert response.json()["integrations"] == {
         "fastgptConfigured": False,
         "databaseConfigured": False,
+        "memoryConfigured": False,
     }
     assert response.headers["cache-control"] == "no-store"
 
@@ -101,6 +104,103 @@ def test_chat_stream_proxies_configured_fastgpt_events() -> None:
     )
 
 
+def test_guest_chat_never_reads_or_writes_long_term_memory() -> None:
+    class FakeMemoryStore:
+        configured = True
+
+        async def search(self, *args, **kwargs):
+            raise AssertionError("guest must not search long-term memory")
+
+        async def remember_interaction(self, *args, **kwargs):
+            raise AssertionError("guest must not write long-term memory")
+
+    class FakeFastGPTClient:
+        async def stream_chat(self, **kwargs):
+            assert kwargs["memories"] == []
+            yield FastGPTEvent(event="delta", data={"text": "游客回答"})
+
+    configured = Settings(
+        _env_file=None,
+        fastgpt_base_url="https://rag.example.com/api",
+        fastgpt_api_key="test-only-key",
+        fastgpt_app_id="app_test",
+    )
+    app.dependency_overrides[get_settings] = lambda: configured
+    app.dependency_overrides[get_fastgpt_client] = lambda: FakeFastGPTClient()
+    app.dependency_overrides[get_memory_store] = lambda: FakeMemoryStore()
+    try:
+        response = client.post(
+            "/api/chat/stream",
+            json={"requestId": "request-guest-1", "message": "我最近喜欢跑步"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert '"memoryMode": "session_only"' in response.text
+
+
+def test_authenticated_user_with_consent_uses_long_term_memory() -> None:
+    calls: list[tuple] = []
+
+    class FakeMemoryStore:
+        configured = True
+
+        async def search(self, user_id, query, limit):
+            calls.append(("search", user_id, query, limit))
+            return [MemoryRecord(id="mem_1", text="用户喜欢简短直接的回答")]
+
+        async def remember_interaction(
+            self, user_id, user_message, assistant_message, conversation_id
+        ):
+            calls.append(
+                (
+                    "remember",
+                    user_id,
+                    user_message,
+                    assistant_message,
+                    conversation_id,
+                )
+            )
+
+    class FakeFastGPTClient:
+        async def stream_chat(self, **kwargs):
+            assert kwargs["memories"] == ["用户喜欢简短直接的回答"]
+            yield FastGPTEvent(event="delta", data={"text": "我会简短回答。"})
+
+    configured = Settings(
+        _env_file=None,
+        fastgpt_base_url="https://rag.example.com/api",
+        fastgpt_api_key="test-only-key",
+        fastgpt_app_id="app_test",
+    )
+    app.dependency_overrides[get_settings] = lambda: configured
+    app.dependency_overrides[get_fastgpt_client] = lambda: FakeFastGPTClient()
+    app.dependency_overrides[get_memory_store] = lambda: FakeMemoryStore()
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="user_123",
+        authenticated=True,
+        memory_consent=True,
+    )
+    try:
+        response = client.post(
+            "/api/chat/stream",
+            json={"requestId": "request-user-01", "message": "给我一点学习建议"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert '"memoryMode": "long_term"' in response.text
+    assert calls[0] == ("search", "user_123", "给我一点学习建议", 5)
+    assert calls[1][0:4] == (
+        "remember",
+        "user_123",
+        "给我一点学习建议",
+        "我会简短回答。",
+    )
+
+
 def test_chat_rejects_blank_message() -> None:
     response = client.post(
         "/api/chat/stream",
@@ -135,3 +235,78 @@ def test_guest_has_no_formal_liko() -> None:
     assert response.status_code == 200
     assert response.json()["authenticated"] is False
     assert response.json()["companion"] is None
+
+
+def test_guest_cannot_list_memories() -> None:
+    response = client.get("/api/users/me/memories")
+
+    assert response.status_code == 401
+
+
+def test_authenticated_user_without_consent_cannot_list_memories() -> None:
+    class FakeMemoryStore:
+        configured = True
+
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="user_123",
+        authenticated=True,
+        memory_consent=False,
+    )
+    app.dependency_overrides[get_memory_store] = lambda: FakeMemoryStore()
+    try:
+        response = client.get("/api/users/me/memories")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 403
+
+
+def test_authenticated_user_can_manage_own_memories() -> None:
+    calls: list[tuple] = []
+
+    class FakeMemoryStore:
+        configured = True
+
+        async def list_memories(self, user_id, limit):
+            calls.append(("list", user_id, limit))
+            return [MemoryRecord(id="mem_1", text="用户喜欢跑步")]
+
+        async def update_memory(self, user_id, memory_id, text):
+            calls.append(("update", user_id, memory_id, text))
+            return MemoryRecord(id=memory_id, text=text)
+
+        async def delete_memory(self, user_id, memory_id):
+            calls.append(("delete", user_id, memory_id))
+
+        async def delete_all(self, user_id):
+            calls.append(("delete_all", user_id))
+
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="user_123",
+        authenticated=True,
+        memory_consent=True,
+    )
+    app.dependency_overrides[get_memory_store] = lambda: FakeMemoryStore()
+    try:
+        listed = client.get("/api/users/me/memories")
+        updated = client.patch(
+            "/api/users/me/memories/mem_1",
+            json={"text": "用户每周跑步三次"},
+        )
+        deleted = client.delete("/api/users/me/memories/mem_1")
+        cleared = client.delete("/api/users/me/memories")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert listed.status_code == 200
+    assert listed.json()[0]["text"] == "用户喜欢跑步"
+    assert updated.status_code == 200
+    assert updated.json()["text"] == "用户每周跑步三次"
+    assert deleted.status_code == 204
+    assert cleared.status_code == 204
+    assert calls == [
+        ("list", "user_123", 50),
+        ("update", "user_123", "mem_1", "用户每周跑步三次"),
+        ("delete", "user_123", "mem_1"),
+        ("delete_all", "user_123"),
+    ]

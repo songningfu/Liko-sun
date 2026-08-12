@@ -23,6 +23,7 @@ dist/
 build/
 coverage/
 backend/evaluation-output/
+backend/data/
 
 # Local working artifacts
 .codex-analysis/

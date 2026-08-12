@@ -1,6 +1,6 @@
 # Liko 最小后端
 
-这是第一版业务后端，使用 FastAPI。H5 流式接口与安全边界已经冻结；未配置 FastGPT 时返回明确的联调占位，配置完成后由后端代理 FastGPT 流式问答。数据库仍未接入。
+这是第一版业务后端，使用 FastAPI。H5 流式接口与安全边界已经冻结；未配置 FastGPT 时返回明确的联调占位，配置完成后由后端代理 FastGPT 流式问答。Mem0 OSS 长期记忆适配层与用户记忆管理接口已经建立，但真实登录、用户数据库和服务器端 Mem0 配置仍未接入。
 
 ## 当前接口
 
@@ -8,6 +8,10 @@
 - `POST /api/chat/stream`：使用 SSE 返回 `meta`、`delta`、`sources`、`done` 或 `error`。FastGPT 配置完整时代理真实问答，否则返回明确的联调占位提示。
 - `POST /api/answers/{answerId}/feedback`：校验反馈格式。数据库未接入前返回 `not_persisted`，不会假装保存成功。
 - `GET /api/users/me/liko`：当前返回游客状态，不生成正式编号。
+- `GET /api/users/me/memories`：登录、同意长期记忆且 Mem0 已配置时，查看或搜索自己的记忆。
+- `PATCH /api/users/me/memories/{memoryId}`：修改自己的单条记忆。
+- `DELETE /api/users/me/memories/{memoryId}`：删除自己的单条记忆。
+- `DELETE /api/users/me/memories`：清空自己的长期记忆。
 
 ## 本地启动
 
@@ -42,6 +46,18 @@ cd backend
 
 FastGPT 需要同时配置 `FASTGPT_BASE_URL`、`FASTGPT_API_KEY` 和 `FASTGPT_APP_ID` 才会启用。`FASTGPT_BASE_URL` 可以填写实例根地址、以 `/api` 结尾的 OpenAPI BaseURL，或完整的 `chat/completions` 地址。PostgreSQL 即使已经配置，当前版本也不会写库。
 
+长期记忆默认关闭。只有 `MEMORY_ENABLED=true` 且 Mem0 的模型、向量模型和独立 PostgreSQL 配置完整时，健康检查才会返回 `memoryConfigured: true`。当前采用：
+
+- Mem0 OSS Python 库，Apache 2.0 许可。
+- `deepseek-v4-flash` 负责从对话中提取和更新记忆。
+- `BAAI/bge-m3` 负责记忆向量化，当前按 1024 维配置。
+- 独立 PostgreSQL + PgVector 保存不同用户的记忆，集合名默认为 `liko_memories`。
+- 本地 `backend/data/` 只保存 Mem0 的修改历史文件，已被 Git 忽略。
+
+Mem0 与校园知识库职责分离：Mem0 只存“关于用户的了解”，FastGPT 继续负责深圳大学事实检索。FastGPT 工作流后续需要新增 `memory_context` 文本变量，并在角色提示词中明确它只是用户背景、不能作为校园事实来源。
+
+游客永远不会读写长期记忆。登录用户也必须先在账号中开启长期记忆；身份和同意状态只能由服务端会话提供，不能相信前端自行传入的 `userId`。目前登录尚未完成，因此默认依赖会把所有请求视为游客。
+
 ## 运行 34 个问题评测
 
 先在 FastGPT 创建测试应用、关联首轮知识库，并确认应用本身能够返回引用；随后运行：
@@ -63,6 +79,7 @@ cd backend
 
 - 没有登录、验证码或正式用户身份。
 - 没有数据库迁移和持久化。
+- Mem0 适配器与记忆管理接口已有测试覆盖，但服务器尚未安装、配置或启用 Mem0。
 - 已有 FastGPT 上游代理、连接/读取超时和安全错误转换；尚未实现自动重试、用户主动停止和限流。
 - 没有保存完整用户问题正文的日志。
 - 正式 Liko 编号仍须由数据库注册顺序生成，不能在浏览器或本接口空壳中随机生成。
