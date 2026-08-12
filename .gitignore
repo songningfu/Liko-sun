@@ -27,3 +27,8 @@ coverage/
 .DS_Store
 Thumbs.db
 
+# External reference repositories (research only)
+/参考项目分析/CUITCCA/
+/参考项目分析/Hust-hub/
+/参考项目分析/openclaw-sjtu/
+/参考项目分析/zafu_xiaolin_campus_agent/

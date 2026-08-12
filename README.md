@@ -4,6 +4,7 @@
 
 ## 当前入口
 
+- 跨电脑接续开发指南：[`项目文档/跨电脑接续开发指南.md`](项目文档/跨电脑接续开发指南.md)
 - 手机 H5 UI：[`liko-h5-ui/index.html`](liko-h5-ui/index.html)
 - H5 使用说明：[`liko-h5-ui/README.md`](liko-h5-ui/README.md)
 - API 与知识库接入说明：[`liko-h5-ui/API接入说明.md`](liko-h5-ui/API接入说明.md)
@@ -27,6 +28,8 @@
 | `.codex-analysis/` | 文档渲染、问卷分析和预览过程文件 | 否，内部工作目录 |
 
 问卷当前被 Excel 占用，因此暂时保留在项目根目录，避免移动正在编辑的文件。
+
+换电脑或交接给新的开发者 / AI 助手时，请先阅读根目录 `AGENTS.md` 与跨电脑接续开发指南。
 
 ## 当前实现边界
 
