@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     fastgpt_app_id: str | None = None
     fastgpt_timeout_seconds: float = Field(default=60, ge=5, le=180)
     database_url: str | None = Field(default=None, repr=False)
+    session_secret: str | None = Field(default=None, repr=False)
+    session_days: int = Field(default=30, ge=1, le=90)
+    guest_daily_limit: int = Field(default=10, ge=1, le=1000)
+    user_daily_limit: int = Field(default=50, ge=1, le=10000)
 
     memory_enabled: bool = False
     mem0_llm_provider: str = "openai"
@@ -64,6 +68,14 @@ class Settings(BaseSettings):
     @property
     def database_configured(self) -> bool:
         return bool(self.database_url)
+
+    @property
+    def auth_configured(self) -> bool:
+        return bool(self.database_url and self.session_secret and len(self.session_secret) >= 32)
+
+    @property
+    def secure_cookies(self) -> bool:
+        return self.environment.lower() not in {"development", "test", "testing"}
 
     @property
     def memory_configured(self) -> bool:

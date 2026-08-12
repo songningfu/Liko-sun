@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
 from .auth import CurrentUser, get_current_user
+from .auth_routes import auth_payload, router as auth_router
 from .config import Settings, get_settings
 from .fastgpt import FastGPTClient, FastGPTUpstreamError
 from .memory import (
@@ -17,6 +18,7 @@ from .memory import (
     MemoryServiceError,
     get_memory_store,
 )
+from .quota import QuotaStatus, consume_chat_quota
 from .schemas import ChatRequest, FeedbackRequest, MemoryItemResponse, MemoryUpdateRequest
 
 
@@ -30,10 +32,11 @@ settings = get_settings()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "X-Request-ID"],
 )
+app.include_router(auth_router)
 
 
 def get_fastgpt_client(
@@ -62,6 +65,7 @@ async def health(config: Annotated[Settings, Depends(get_settings)]) -> dict:
         "integrations": {
             "fastgptConfigured": config.fastgpt_configured,
             "databaseConfigured": config.database_configured,
+            "authConfigured": config.auth_configured,
             "memoryConfigured": config.memory_configured,
         },
     }
@@ -74,6 +78,7 @@ async def chat_stream(
     fastgpt: Annotated[FastGPTClient, Depends(get_fastgpt_client)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     memory_store: Annotated[LongTermMemoryStore, Depends(get_memory_store)],
+    quota: Annotated[QuotaStatus, Depends(consume_chat_quota)],
 ) -> AsyncIterable[ServerSentEvent]:
     """Expose the frontend streaming contract without fabricating a campus answer."""
 
@@ -100,6 +105,11 @@ async def chat_stream(
             "answerId": answer_id,
             "mode": "fastgpt" if config.fastgpt_configured else "integration_stub",
             "memoryMode": "long_term" if memory_active else "session_only",
+            "quota": {
+                "limit": quota.limit,
+                "used": quota.used,
+                "remaining": quota.remaining,
+            },
         },
     )
 
@@ -182,12 +192,13 @@ async def record_feedback(answer_id: str, payload: FeedbackRequest) -> JSONRespo
 
 
 @app.get("/api/users/me/liko")
-async def current_liko() -> dict:
-    return {
-        "authenticated": False,
-        "companion": None,
-        "message": "游客模式尚未创建正式 Liko；登录和注册顺序编号将在用户系统接入后提供。",
-    }
+async def current_liko(
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+) -> dict:
+    payload = auth_payload(current_user)
+    if not current_user.authenticated:
+        payload["message"] = "游客可以正常使用问答；注册后才会生成并永久绑定专属 Liko。"
+    return payload
 
 
 def _require_memory_user(current_user: CurrentUser, memory_store: LongTermMemoryStore) -> str:

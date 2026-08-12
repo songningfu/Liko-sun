@@ -19,6 +19,10 @@
       --skin: #fff0c7;
       --skin-light: #fffaf0;
       --skin-deep: #edc77e;
+      --shell: #e95f68;
+      --shell-light: #ff8a8f;
+      --shell-deep: #b93e4b;
+      --face: #4a3540;
       --leaf: #79b864;
       --leaf-deep: #3e8051;
       --shadow: 0 16px 38px rgba(75, 56, 47, .08);
@@ -628,7 +632,7 @@
     .color-row { margin-top:13px; padding:11px 13px; border-radius:16px; background:rgba(255,255,255,.58); display:flex; justify-content:space-around; gap:12px; }
     .color-item { display:flex; align-items:center; gap:8px; }
     .color-dot { width:23px; height:23px; border:3px solid rgba(255,255,255,.8); border-radius:50%; box-shadow:0 0 0 1px rgba(91,67,52,.12); }
-    .color-dot.shell { background:var(--berry); }
+    .color-dot.shell { background:var(--shell); }
     .color-dot.skin { background:var(--skin); }
     .color-copy span { display:block; color:var(--muted); font-size:10px; }
     .color-copy strong { display:block; font-size:12px; }
@@ -640,6 +644,24 @@
     .setting-icon { width:31px; height:31px; border-radius:10px; background:#f4efe8; display:grid; place-items:center; color:#6b645e; }
     .setting-icon svg { width:17px; height:17px; }
     .setting-side { color:#99918a; font-size:11px; }
+    .account-button { width:100%; min-height:48px; margin-top:15px; border:0; border-radius:15px; background:#3b3531; color:white; font-weight:730; cursor:pointer; }
+    .account-button.secondary { border:1px solid var(--line); background:var(--card); color:#5f5752; }
+    .quota-copy { margin:10px 2px 0; color:var(--muted); font-size:11px; text-align:center; }
+    .auth-sheet { display:none; position:fixed; inset:0; z-index:90; padding:20px; background:rgba(40,34,31,.24); align-items:center; justify-content:center; }
+    .auth-sheet.is-open { display:flex; }
+    .auth-panel { width:min(100%,390px); padding:22px; border-radius:25px; background:var(--card); box-shadow:0 18px 60px rgba(44,35,30,.18); }
+    .auth-panel h2 { margin:0 0 6px; font-size:21px; }
+    .auth-panel p { margin:0 0 16px; color:var(--muted); font-size:12px; line-height:1.6; }
+    .auth-tabs { display:flex; gap:6px; margin-bottom:15px; padding:4px; border-radius:13px; background:#f4eee7; }
+    .auth-tab { flex:1; min-height:37px; border:0; border-radius:10px; background:transparent; color:var(--muted); cursor:pointer; }
+    .auth-tab.is-active { background:white; color:var(--ink); font-weight:700; box-shadow:0 2px 8px rgba(50,40,34,.07); }
+    .auth-field { display:block; margin-top:11px; color:#5f5752; font-size:11px; font-weight:650; }
+    .auth-field input { width:100%; min-height:45px; margin-top:6px; padding:0 13px; border:1px solid var(--line); border-radius:13px; background:#fbf8f3; color:var(--ink); }
+    .auth-actions { display:flex; gap:9px; margin-top:17px; }
+    .auth-actions button { flex:1; min-height:44px; border:0; border-radius:13px; cursor:pointer; }
+    .auth-cancel { background:#f2ece5; color:#635b55; }
+    .auth-submit { background:#3b3531; color:white; font-weight:700; }
+    .recovery-box { padding:13px; border-radius:13px; background:#f4eee7; color:#3f3935; font-family:ui-monospace, monospace; font-size:14px; font-weight:750; letter-spacing:.5px; text-align:center; user-select:all; }
 
     /* 底部导航 */
     .bottom-nav {
@@ -717,7 +739,7 @@
 
         <section class="companion-card" aria-label="Liko 角色主页">
           <div class="identity-line">
-            <span class="serial-pill">No. 000128</span>
+            <span class="serial-pill" data-liko-number>游客模式</span>
           </div>
 
           <div class="mascot-stage">
@@ -858,9 +880,9 @@
                 </g>
 
                 <!-- 前下部固定编号牌：无名字前缀 -->
-                <g aria-label="唯一编号 No. 000128">
+                <g id="likoNumberPlate" aria-label="游客模式">
                   <rect x="162" y="337" width="96" height="27" rx="11" fill="#fffaf1" stroke="var(--shell-deep)" stroke-width="3" />
-                  <text x="210" y="355" text-anchor="middle" fill="#694c56" font-family="system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1">No. 000128</text>
+                  <text id="likoNumberText" x="210" y="355" text-anchor="middle" fill="#694c56" font-family="system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1">游客模式</text>
                 </g>
               </g>
             </svg>
@@ -876,7 +898,7 @@
 
         <section class="profile-strip" aria-label="Liko 的信息">
           <div class="profile-facts">
-            <div class="profile-fact"><span>年龄</span><strong>12 天大</strong></div>
+            <div class="profile-fact"><span>年龄</span><strong id="profileAge">游客模式</strong></div>
             <div class="profile-fact"><span>今天的状态</span><strong id="profileState">安静待机</strong></div>
           </div>
           <p class="personality">有点慢热，但很会记住你在意的小事。最近喜欢傍晚吹风，也愿意陪你把校园里的问题慢慢弄清楚。</p>
@@ -890,7 +912,7 @@
           </button>
           <div class="chat-title"><strong>问 Liko</strong><span>校园里的事，慢慢问</span></div>
           <div class="chat-avatar" aria-hidden="true">
-            <svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="#e95f68"/><circle cx="30" cy="31" r="16" fill="#fff0c7"/><circle cx="25" cy="29" r="2" fill="#4a3540"/><circle cx="35" cy="29" r="2" fill="#4a3540"/><path d="M26 36q4 3 8 0" fill="none" stroke="#4a3540" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
+            <svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
           </div>
         </header>
 
@@ -908,7 +930,7 @@
           <div class="user-message" id="questionText">丽湖校区图书馆几点关门？</div>
           <article class="answer-card">
             <header class="answer-head">
-              <span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="#e95f68"/><circle cx="30" cy="31" r="16" fill="#fff0c7"/><circle cx="25" cy="29" r="2" fill="#4a3540"/><circle cx="35" cy="29" r="2" fill="#4a3540"/><path d="M26 36q4 3 8 0" fill="none" stroke="#4a3540" stroke-width="2" stroke-linecap="round"/></svg></span>
+              <span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/></svg></span>
               <div><div class="answer-name">Liko</div><div class="answer-note" id="answerNote">已核对校园资料</div></div>
             </header>
             <div class="answer-body" id="answerBody">
@@ -943,22 +965,27 @@
       <h1 class="page-title" id="mineTitle">我的</h1>
       <section class="mine-card" aria-label="我的 Liko 身份卡">
         <div class="mine-top">
-          <svg class="mine-portrait" viewBox="0 0 60 60" role="img" aria-label="我的 Liko"><circle cx="30" cy="31" r="25" fill="#e95f68"/><circle cx="30" cy="31" r="17" fill="#fff0c7"/><circle cx="24" cy="29" r="2.2" fill="#4a3540"/><circle cx="36" cy="29" r="2.2" fill="#4a3540"/><path d="M25 37q5 4 10 0" fill="none" stroke="#4a3540" stroke-width="2.3" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
-          <div><div class="mine-name">Liko</div><span class="serial-pill">No. 000128</span><div class="mine-desc">只属于你的校园伴生助手<br/>现在 12 天大</div></div>
+          <svg class="mine-portrait liko-mini" viewBox="0 0 60 60" role="img" aria-label="我的 Liko"><circle cx="30" cy="31" r="25" fill="var(--shell)"/><circle cx="30" cy="31" r="17" fill="var(--skin)"/><circle cx="24" cy="29" r="2.2" fill="var(--face)"/><circle cx="36" cy="29" r="2.2" fill="var(--face)"/><path d="M25 37q5 4 10 0" fill="none" stroke="var(--face)" stroke-width="2.3" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
+          <div><div class="mine-name" id="mineName">游客</div><span class="serial-pill" data-liko-number>尚未注册</span><div class="mine-desc" id="mineDesc">可以直接问 Liko<br/>注册后生成专属形象与长期记忆</div></div>
         </div>
         <div class="color-row" aria-label="当前配色">
-          <div class="color-item"><span class="color-dot shell"></span><span class="color-copy"><span>外壳</span><strong>荔枝红</strong></span></div>
-          <div class="color-item"><span class="color-dot skin"></span><span class="color-copy"><span>肤色</span><strong>奶油色</strong></span></div>
+          <div class="color-item"><span class="color-dot shell"></span><span class="color-copy"><span>外壳</span><strong id="shellColor">注册后随机</strong></span></div>
+          <div class="color-item"><span class="color-dot skin"></span><span class="color-copy"><span>内层</span><strong id="skinColor">注册后随机</strong></span></div>
         </div>
       </section>
+      <button class="account-button" type="button" id="accountAction">登录 / 注册</button>
+      <p class="quota-copy" id="quotaCopy">游客每日可问 10 次</p>
       <div class="settings-label">常用</div>
       <section class="settings-card">
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/></svg></span>个人资料</span><span class="setting-side">未完善 ›</span></button>
+        <button class="setting-row" id="changePasswordAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>修改密码</span><span class="setting-side">登录后可用 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side">›</span></button>
+        <button class="setting-row" id="memoryConsentAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-4.6 7A4 4 0 0 0 9 17.7V21l3-2 3 2v-3.3A4 4 0 0 0 16.6 10 5 5 0 0 0 12 3Z"/><path d="M9.5 10.5h5M10.5 13.5h3"/></svg></span>长期记忆</span><span class="setting-side" id="memoryConsentSide">登录后开启 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 2.7 7.7 7 10 4.3-2.3 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>偏好与隐私</span><span class="setting-side">›</span></button>
       </section>
       <div class="settings-label">更多</div>
       <section class="settings-card"><button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon">i</span>关于 Liko</span><span class="setting-side">v0.2 ›</span></button></section>
+      <button class="account-button secondary" type="button" id="logoutAction" hidden>退出登录</button>
     </section>
 
     <div class="composer-dock is-hidden" id="composerDock">
@@ -986,6 +1013,28 @@
       <button class="sheet-close" type="button" id="closeFeedback">暂不选择</button>
     </div>
   </div>
+  <div class="auth-sheet" id="authSheet" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <form class="auth-panel" id="authForm">
+      <h2 id="authTitle">登录 Liko</h2>
+      <p id="authHint">登录后会在不同设备同步你的专属 Liko 和长期记忆。</p>
+      <div class="auth-tabs"><button class="auth-tab is-active" type="button" data-auth-mode="login">登录</button><button class="auth-tab" type="button" data-auth-mode="register">注册</button><button class="auth-tab" type="button" data-auth-mode="recover">找回</button></div>
+      <label class="auth-field">账号<input id="authUsername" maxlength="20" autocomplete="username" placeholder="4–20 位小写字母、数字或下划线" required /></label>
+      <label class="auth-field" id="recoveryCodeField" hidden>恢复码<input id="authRecoveryCode" maxlength="32" autocomplete="off" placeholder="注册时保存的恢复码" /></label>
+      <label class="auth-field"><span id="authPasswordLabel">密码</span><input id="authPassword" type="password" minlength="8" maxlength="128" autocomplete="current-password" placeholder="至少 8 位" required /></label>
+      <div class="auth-actions"><button class="auth-cancel" type="button" id="authCancel">取消</button><button class="auth-submit" type="submit" id="authSubmit">登录</button></div>
+    </form>
+  </div>
+  <div class="auth-sheet" id="recoverySheet" role="dialog" aria-modal="true" aria-labelledby="recoveryTitle">
+    <div class="auth-panel"><h2 id="recoveryTitle">请保存恢复码</h2><p>忘记密码时只能凭这个恢复码找回。它只展示这一次，请截图或抄到安全的地方。</p><div class="recovery-box" id="recoveryCode"></div><button class="account-button" type="button" id="recoveryDone">我已保存</button></div>
+  </div>
+  <div class="auth-sheet" id="passwordSheet" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
+    <form class="auth-panel" id="passwordForm">
+      <h2 id="passwordTitle">修改密码</h2><p>修改成功后，其他设备上的旧登录会失效。</p>
+      <label class="auth-field">当前密码<input id="currentPassword" type="password" minlength="8" maxlength="128" autocomplete="current-password" required /></label>
+      <label class="auth-field">新密码<input id="newPassword" type="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="至少 8 位" required /></label>
+      <div class="auth-actions"><button class="auth-cancel" type="button" id="passwordCancel">取消</button><button class="auth-submit" type="submit">确认修改</button></div>
+    </form>
+  </div>
 
   <script>
     (() => {
@@ -1010,6 +1059,146 @@
       let activeRequest;
       let currentAnswerId = null;
       let conversationId = null;
+      let authMode = 'login';
+      let authState = {authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}};
+
+      const apiRequest = async (path, options = {}) => {
+        const response = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          credentials:'include',
+          headers: options.body ? {'Content-Type':'application/json', ...(options.headers || {})} : options.headers
+        });
+        if (!response.ok) {
+          let detail = '操作失败，请稍后再试';
+          try { detail = (await response.json()).detail || detail; } catch {}
+          const error = new Error(detail);
+          error.status = response.status;
+          throw error;
+        }
+        return response.status === 204 ? null : response.json();
+      };
+
+      const applyPalette = (palette = {}) => {
+        const fallback = {shell:'#E95F68', shellLight:'#FF8A8F', shellDeep:'#B93E4B', skin:'#FFF0C7', skinLight:'#FFFAF0', skinDeep:'#EDC77E', face:'#4A3540'};
+        const colors = {...fallback, ...palette};
+        const variables = {shell:'--shell', shellLight:'--shell-light', shellDeep:'--shell-deep', skin:'--skin', skinLight:'--skin-light', skinDeep:'--skin-deep', face:'--face'};
+        Object.entries(variables).forEach(([key, variable]) => {
+          document.documentElement.style.setProperty(variable, colors[key]);
+          liko.style.setProperty(variable, colors[key]);
+        });
+      };
+
+      const renderAccount = (state) => {
+        authState = state;
+        const companion = state.companion;
+        const number = companion?.displayNumber || '游客模式';
+        document.querySelectorAll('[data-liko-number]').forEach(node => { node.textContent = number; });
+        document.getElementById('likoNumberText').textContent = companion?.displayNumber || '游客模式';
+        document.getElementById('likoNumberPlate').setAttribute('aria-label', companion?.displayNumber || '游客模式');
+        document.getElementById('mineName').textContent = state.authenticated ? state.user.username : '游客';
+        document.getElementById('mineDesc').innerHTML = state.authenticated
+          ? `只属于你的校园伴生助手<br>现在 ${companion.ageDays} 天大`
+          : '可以直接问 Liko<br>注册后生成专属形象与长期记忆';
+        document.getElementById('profileAge').textContent = companion ? `${companion.ageDays} 天大` : '游客模式';
+        document.getElementById('shellColor').textContent = companion?.palette.shell || '注册后随机';
+        document.getElementById('skinColor').textContent = companion?.palette.skin || '注册后随机';
+        document.getElementById('accountAction').hidden = state.authenticated;
+        document.getElementById('logoutAction').hidden = !state.authenticated;
+        document.getElementById('memoryConsentSide').textContent = state.authenticated ? (state.user.memoryConsent ? '已开启 ›' : '已关闭 ›') : '登录后开启 ›';
+        document.querySelector('#changePasswordAction .setting-side').textContent = state.authenticated ? '›' : '登录后可用 ›';
+        const quota = state.quota || authState.quota;
+        if (quota) document.getElementById('quotaCopy').textContent = `${state.authenticated ? '登录用户' : '游客'}今日剩余 ${quota.remaining} / ${quota.limit} 次`;
+        applyPalette(companion?.palette);
+      };
+
+      const refreshAccount = async () => {
+        try { renderAccount(await apiRequest('/api/auth/me')); }
+        catch { document.getElementById('quotaCopy').textContent = '账号服务暂时不可用，问答仍可尝试使用'; }
+      };
+
+      const setAuthMode = (mode) => {
+        authMode = mode;
+        document.querySelectorAll('[data-auth-mode]').forEach(button => button.classList.toggle('is-active', button.dataset.authMode === mode));
+        const modeCopy = {
+          login: {title:'登录 Liko', submit:'登录', password:'密码', hint:'登录后会在不同设备同步你的专属 Liko 和长期记忆。'},
+          register: {title:'注册 Liko', submit:'注册并生成 Liko', password:'密码', hint:'注册后会生成专属形象并开启长期记忆；你可以随时关闭和删除。'},
+          recover: {title:'用恢复码找回', submit:'重设密码', password:'新密码', hint:'填写注册时保存的恢复码。重设后旧恢复码会失效，并生成一个新的。'}
+        }[mode];
+        document.getElementById('authTitle').textContent = modeCopy.title;
+        document.getElementById('authHint').textContent = modeCopy.hint;
+        document.getElementById('authSubmit').textContent = modeCopy.submit;
+        document.getElementById('authPasswordLabel').textContent = modeCopy.password;
+        document.getElementById('recoveryCodeField').hidden = mode !== 'recover';
+        document.getElementById('authRecoveryCode').required = mode === 'recover';
+        document.getElementById('authPassword').autocomplete = mode === 'login' ? 'current-password' : 'new-password';
+      };
+
+      const openAuth = () => { setAuthMode('login'); document.getElementById('authSheet').classList.add('is-open'); document.getElementById('authUsername').focus(); };
+      const closeAuth = () => document.getElementById('authSheet').classList.remove('is-open');
+
+      document.getElementById('accountAction').addEventListener('click', openAuth);
+      document.getElementById('authCancel').addEventListener('click', closeAuth);
+      document.querySelectorAll('[data-auth-mode]').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
+      document.getElementById('authForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const username = document.getElementById('authUsername').value.trim().toLowerCase();
+        const password = document.getElementById('authPassword').value;
+        const submit = document.getElementById('authSubmit');
+        submit.disabled = true;
+        try {
+          const requestBody = authMode === 'recover'
+            ? {username, recoveryCode:document.getElementById('authRecoveryCode').value.trim(), newPassword:password}
+            : {username, password};
+          const result = await apiRequest(`/api/auth/${authMode}`, {method:'POST', body:JSON.stringify(requestBody)});
+          closeAuth();
+          document.getElementById('authForm').reset();
+          await refreshAccount();
+          if (result.recoveryCode) {
+            document.getElementById('recoveryCode').textContent = result.recoveryCode;
+            document.getElementById('recoverySheet').classList.add('is-open');
+          } else showToast('登录成功，欢迎回来');
+        } catch (error) { showToast(error.message); }
+        finally { submit.disabled = false; }
+      });
+      document.getElementById('recoveryDone').addEventListener('click', () => {
+        document.getElementById('recoverySheet').classList.remove('is-open');
+        showToast('专属 Liko 已生成');
+      });
+      document.getElementById('logoutAction').addEventListener('click', async () => {
+        try { await apiRequest('/api/auth/logout', {method:'POST'}); renderAccount({authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}}); await refreshAccount(); showToast('已退出登录'); }
+        catch (error) { showToast(error.message); }
+      });
+      document.getElementById('memoryConsentAction').addEventListener('click', async () => {
+        if (!authState.authenticated) { openAuth(); return; }
+        const enabled = !authState.user.memoryConsent;
+        try {
+          const result = await apiRequest('/api/auth/memory-consent', {method:'PATCH', body:JSON.stringify({enabled})});
+          renderAccount({...result, quota:authState.quota});
+          showToast(enabled ? '长期记忆已开启' : '长期记忆已关闭');
+        } catch (error) { showToast(error.message); }
+      });
+      document.getElementById('changePasswordAction').addEventListener('click', () => {
+        if (!authState.authenticated) { openAuth(); return; }
+        document.getElementById('passwordSheet').classList.add('is-open');
+        document.getElementById('currentPassword').focus();
+      });
+      document.getElementById('passwordCancel').addEventListener('click', () => document.getElementById('passwordSheet').classList.remove('is-open'));
+      document.getElementById('passwordForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const submit = event.currentTarget.querySelector('[type="submit"]');
+        submit.disabled = true;
+        try {
+          const result = await apiRequest('/api/auth/password', {method:'POST', body:JSON.stringify({
+            currentPassword:document.getElementById('currentPassword').value,
+            newPassword:document.getElementById('newPassword').value
+          })});
+          renderAccount({...result, quota:authState.quota});
+          document.getElementById('passwordSheet').classList.remove('is-open');
+          document.getElementById('passwordForm').reset();
+          showToast('密码已修改');
+        } catch (error) { showToast(error.message); }
+        finally { submit.disabled = false; }
+      });
 
       const stateCopy = {
         idle: { title:'我在这儿，随时都可以叫我。', detail:'轻轻呼吸，等你一起逛校园。', profile:'安静待机', aria:'Liko 的待机状态' },
@@ -1173,6 +1362,10 @@
           currentAnswerId = data.answerId || null;
           conversationId = data.conversationId || conversationId;
           document.getElementById('answerNote').textContent = data.mode === 'integration_stub' ? '后端联调模式' : '正在核对校园资料';
+          if (data.quota) {
+            authState.quota = data.quota;
+            document.getElementById('quotaCopy').textContent = `${authState.authenticated ? '登录用户' : '游客'}今日剩余 ${data.quota.remaining} / ${data.quota.limit} 次`;
+          }
         }
         if (eventName === 'delta') {
           answerText.value += data.text || '';
@@ -1193,7 +1386,14 @@
       };
 
       const consumeEventStream = async (response) => {
-        if (!response.ok || !response.body) throw new Error(`问答服务返回 ${response.status}`);
+        if (!response.ok) {
+          let message = `问答服务返回 ${response.status}`;
+          try { message = (await response.json()).detail || message; } catch {}
+          const error = new Error(message);
+          error.isBusinessError = true;
+          throw error;
+        }
+        if (!response.body) throw new Error('问答服务没有返回内容');
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         const answerText = {value: ''};
@@ -1246,6 +1446,7 @@
               message: question,
               source
             }),
+            credentials:'include',
             signal: requestController.signal
           });
           await consumeEventStream(response);
@@ -1298,6 +1499,7 @@
         showToast(`已记录：${button.textContent}`);
       }));
       document.querySelectorAll('.shell-action').forEach(button => button.addEventListener('click', () => showToast('功能入口已预留')));
+      refreshAccount();
     })();
   </script>
 </body>

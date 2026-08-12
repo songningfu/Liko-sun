@@ -3,6 +3,35 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator
 
 
+class RegisterRequest(BaseModel):
+    username: str = Field(min_length=4, max_length=20)
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=20)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(alias="currentPassword", min_length=1, max_length=128)
+    new_password: str = Field(alias="newPassword", min_length=8, max_length=128)
+
+    model_config = {"populate_by_name": True}
+
+
+class PasswordRecoveryRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=20)
+    recovery_code: str = Field(alias="recoveryCode", min_length=20, max_length=32)
+    new_password: str = Field(alias="newPassword", min_length=8, max_length=128)
+
+    model_config = {"populate_by_name": True}
+
+
+class MemoryConsentRequest(BaseModel):
+    enabled: bool
+
+
 class ChatRequest(BaseModel):
     request_id: str = Field(alias="requestId", min_length=8, max_length=100)
     conversation_id: str | None = Field(default=None, alias="conversationId", max_length=100)

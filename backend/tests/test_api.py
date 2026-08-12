@@ -28,6 +28,7 @@ def test_health_reports_unconfigured_integrations() -> None:
     assert response.json()["integrations"] == {
         "fastgptConfigured": False,
         "databaseConfigured": False,
+        "authConfigured": False,
         "memoryConfigured": False,
     }
     assert response.headers["cache-control"] == "no-store"
