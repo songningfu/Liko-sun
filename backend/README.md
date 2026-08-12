@@ -98,7 +98,10 @@ cd backend
 
 - H5 由 Nginx 提供，`/api/` 反向代理到仅监听本机的 FastAPI。
 - FastAPI 由 `liko-api.service` 托管，部署目录为 `/opt/liko/backend`。
+- 账号数据使用独立的 `liko-postgres` 容器与持久化卷，仅监听服务器本机 `127.0.0.1:5433`，不与 FastGPT 业务表混用，也不暴露公网。
 - FastGPT 使用官方 Docker Compose PgVector 方案，部署目录为 `/opt/liko/fastgpt`；MongoDB、PostgreSQL、Redis、对象存储和沙箱端口均不直接暴露公网。
 - 首轮 FastGPT 导入包已上传到 `/opt/liko/release/知识库/RAG加工/FastGPT首轮导入包`。
 
 服务器环境文件不纳入仓库。完成模型提供商配置、知识库导入并创建应用后，再把 FastGPT 应用 API Key 与 App ID 写入服务器端 `/opt/liko/backend/.env`，然后重启 `liko-api.service`。
+
+账号系统已于 2026-08-12 随提交 `a99afc5` 部署到测试服务器。当前测试入口仍是 IP HTTP，因此暂用 `ENVIRONMENT=development` 让登录 Cookie 可在测试阶段保存；Cookie 仍为 HttpOnly 与 SameSite=Lax。正式开放注册前必须绑定独立域名、启用 HTTPS，并把 `ENVIRONMENT` 改回 `production`，恢复 Secure Cookie。
