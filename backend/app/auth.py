@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .config import Settings, get_settings
 from .database import Database, LoginSession, User, get_database, utc_now
-from .liko import create_liko_colors
+from .liko import create_liko_colors, validate_liko_colors
 
 
 SESSION_COOKIE = "liko_session"
@@ -42,6 +42,7 @@ class CurrentUser:
     liko_number: int | None = None
     shell_color: str | None = None
     skin_color: str | None = None
+    color_choice_available: bool = False
     created_at: object | None = None
     session_token: str | None = None
 
@@ -193,6 +194,7 @@ class AuthService:
                 liko_number=user.liko_number,
                 shell_color=user.shell_color,
                 skin_color=user.skin_color,
+                color_choice_available=user.color_choice_available,
                 created_at=user.created_at,
                 session_token=raw_token,
             )
@@ -239,6 +241,21 @@ class AuthService:
             if not user:
                 raise ValueError("账号不存在")
             user.memory_consent = enabled
+            db.flush()
+            db.expunge(user)
+            return user
+
+    def choose_liko_colors(self, user_id: str, shell: str, skin: str) -> User:
+        shell, skin = validate_liko_colors(shell, skin)
+        with self.database.session() as db, db.begin():
+            user = db.scalar(select(User).where(User.id == user_id).with_for_update())
+            if not user:
+                raise ValueError("账号不存在")
+            if not user.color_choice_available:
+                raise PermissionError("首次选色机会已经使用；以后可通过换色道具再次修改")
+            user.shell_color = shell
+            user.skin_color = skin
+            user.color_choice_available = False
             db.flush()
             db.expunge(user)
             return user

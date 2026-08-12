@@ -21,6 +21,7 @@ from .liko import derive_palette, format_liko_number
 from .quota import read_chat_quota
 from .schemas import (
     LoginRequest,
+    LikoColorChoiceRequest,
     MemoryConsentRequest,
     PasswordChangeRequest,
     PasswordRecoveryRequest,
@@ -85,6 +86,7 @@ def companion_payload(current_user: CurrentUser) -> dict | None:
         "number": current_user.liko_number,
         "displayNumber": format_liko_number(current_user.liko_number),
         "ageDays": age_days,
+        "colorChoiceAvailable": current_user.color_choice_available,
         "palette": derive_palette(current_user.shell_color or "#E95F68", current_user.skin_color or "#FFF0C7"),
     }
 
@@ -265,5 +267,24 @@ def update_memory_consent(
     if not current_user.authenticated or not current_user.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
     service.set_memory_consent(current_user.user_id, payload.enabled)
+    refreshed = service.resolve_session(current_user.session_token or "")
+    return auth_payload(refreshed)
+
+
+@router.patch("/liko-colors")
+def choose_liko_colors(
+    payload: LikoColorChoiceRequest,
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    service_optional: Annotated[AuthService | None, Depends(get_auth_service)],
+) -> dict:
+    service = _require_service(service_optional)
+    if not current_user.authenticated or not current_user.user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
+    try:
+        service.choose_liko_colors(current_user.user_id, payload.shell, payload.skin)
+    except PermissionError as error:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(error)) from error
     refreshed = service.resolve_session(current_user.session_token or "")
     return auth_payload(refreshed)

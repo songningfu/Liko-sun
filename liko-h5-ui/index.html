@@ -678,6 +678,12 @@
     .auth-cancel { background:#f2ece5; color:#635b55; }
     .auth-submit { background:#3b3531; color:white; font-weight:700; }
     .recovery-box { padding:13px; border-radius:13px; background:#f4eee7; color:#3f3935; font-family:ui-monospace, monospace; font-size:14px; font-weight:750; letter-spacing:.5px; text-align:center; user-select:all; }
+    .color-preview { width:132px; height:132px; margin:2px auto 16px; border-radius:50%; background:var(--preview-shell); display:grid; place-items:center; box-shadow:0 14px 30px rgba(67,49,41,.12); }
+    .color-preview-inner { width:84px; height:84px; border:5px solid rgba(255,255,255,.72); border-radius:50%; background:var(--preview-skin); box-shadow:0 0 0 1px rgba(89,71,62,.1); }
+    .color-picker-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .color-picker { min-width:0; padding:11px; border:1px solid var(--line); border-radius:15px; background:#fbf8f3; color:#5f5752; font-size:12px; font-weight:700; }
+    .color-picker input { width:100%; height:46px; margin-top:8px; padding:3px; border:0; border-radius:11px; background:white; cursor:pointer; }
+    .color-randomize { width:100%; min-height:42px; margin-top:10px; border:1px solid var(--line); border-radius:13px; background:#f6f0e9; color:#5f5752; font-weight:680; cursor:pointer; }
 
     /* 底部导航 */
     .bottom-nav {
@@ -993,6 +999,7 @@
       <p class="quota-copy" id="quotaCopy">游客每日可问 10 次</p>
       <div class="settings-label">常用</div>
       <section class="settings-card">
+        <button class="setting-row" id="colorChoiceAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/><path d="M8.5 15c2.4 1.8 4.6 1.8 7 0"/></svg></span>Liko 配色</span><span class="setting-side" id="colorChoiceSide">注册后可选一次 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/></svg></span>个人资料</span><span class="setting-side">未完善 ›</span></button>
         <button class="setting-row" id="changePasswordAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>修改密码</span><span class="setting-side">登录后可用 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side">›</span></button>
@@ -1051,6 +1058,19 @@
       <div class="auth-actions"><button class="auth-cancel" type="button" id="passwordCancel">取消</button><button class="auth-submit" type="submit">确认修改</button></div>
     </form>
   </div>
+  <div class="auth-sheet" id="colorSheet" role="dialog" aria-modal="true" aria-labelledby="colorTitle">
+    <form class="auth-panel" id="colorForm">
+      <h2 id="colorTitle">选出你的 Liko</h2>
+      <p>注册会赠送一次配色机会。确认后会同步到你的账号；以后可使用换色道具再次修改。</p>
+      <div class="color-preview" id="colorPreview" aria-label="外壳色与肤色搭配预览"><div class="color-preview-inner"></div></div>
+      <div class="color-picker-grid">
+        <label class="color-picker">外壳颜色<input id="shellColorInput" type="color" value="#E95F68" /></label>
+        <label class="color-picker">肤色<input id="skinColorInput" type="color" value="#FFF0C7" /></label>
+      </div>
+      <button class="color-randomize" id="randomizeColors" type="button">换一组灵感配色</button>
+      <div class="auth-actions"><button class="auth-cancel" type="button" id="colorCancel">稍后再选</button><button class="auth-submit" type="submit">确认这组颜色</button></div>
+    </form>
+  </div>
 
   <script>
     (() => {
@@ -1082,6 +1102,33 @@
       let authMode = 'login';
       let authState = {authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}};
       let systemState = {memoryConfigured:false};
+
+      const randomHexColor = () => `#${Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0').toUpperCase()}`;
+      const colorRgb = value => [1,3,5].map(index => Number.parseInt(value.slice(index, index + 2), 16));
+      const colorDistance = (first, second) => {
+        const a = colorRgb(first), b = colorRgb(second);
+        return Math.sqrt(a.reduce((sum, channel, index) => sum + (channel - b[index]) ** 2, 0));
+      };
+      const randomColorPair = () => {
+        const shell = randomHexColor();
+        let skin = randomHexColor();
+        while (colorDistance(shell, skin) < 72) skin = randomHexColor();
+        return {shell, skin};
+      };
+      const mixColor = (value, target, amount) => {
+        const source = colorRgb(value);
+        return `#${source.map((channel, index) => Math.round(channel + (target[index] - channel) * amount).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+      };
+      const paletteFromPair = ({shell, skin}) => {
+        const shellLight = mixColor(shell, [255,255,255], .3);
+        const shellDeep = mixColor(shell, [0,0,0], .26);
+        const skinLight = mixColor(skin, [255,255,255], .3);
+        const skinDeep = mixColor(skin, [0,0,0], .26);
+        const [red, green, blue] = colorRgb(skin).map(channel => channel / 255);
+        const luminance = .2126 * red + .7152 * green + .0722 * blue;
+        return {shell, shellLight, shellDeep, skin, skinLight, skinDeep, face:luminance < .42 ? '#FFFDF8' : '#30272C'};
+      };
+      const guestPalette = paletteFromPair(randomColorPair());
 
       const apiRequest = async (path, options = {}) => {
         const response = await fetch(`${API_BASE}${path}`, {
@@ -1131,7 +1178,27 @@
         document.querySelector('#changePasswordAction .setting-side').textContent = state.authenticated ? '›' : '登录后可用 ›';
         const quota = state.quota || authState.quota;
         if (quota) document.getElementById('quotaCopy').textContent = `${state.authenticated ? '登录用户' : '游客'}今日剩余 ${quota.remaining} / ${quota.limit} 次`;
-        applyPalette(companion?.palette);
+        document.getElementById('colorChoiceSide').textContent = !state.authenticated
+          ? '注册后可选一次 ›'
+          : companion?.colorChoiceAvailable ? '还有 1 次 ›' : '等待换色道具 ›';
+        applyPalette(companion?.palette || guestPalette);
+      };
+
+      const updateColorPreview = () => {
+        const shell = document.getElementById('shellColorInput').value.toUpperCase();
+        const skin = document.getElementById('skinColorInput').value.toUpperCase();
+        const preview = document.getElementById('colorPreview');
+        preview.style.setProperty('--preview-shell', shell);
+        preview.style.setProperty('--preview-skin', skin);
+      };
+
+      const openColorChoice = () => {
+        if (!authState.authenticated) { openAuth(); setAuthMode('register'); return; }
+        if (!authState.companion?.colorChoiceAvailable) { showToast('首次选色机会已使用，以后可用换色道具修改'); return; }
+        document.getElementById('shellColorInput').value = authState.companion.palette.shell;
+        document.getElementById('skinColorInput').value = authState.companion.palette.skin;
+        updateColorPreview();
+        document.getElementById('colorSheet').classList.add('is-open');
       };
 
       const dayPeriod = () => {
@@ -1178,7 +1245,7 @@
         document.querySelectorAll('[data-auth-mode]').forEach(button => button.classList.toggle('is-active', button.dataset.authMode === mode));
         const modeCopy = {
           login: {title:'登录 Liko', submit:'登录', password:'密码', hint:'登录后会在不同设备同步你的专属 Liko 和长期记忆。'},
-          register: {title:'注册 Liko', submit:'注册并生成 Liko', password:'密码', hint:'注册后会生成专属形象；长期记忆由你选择开启，也可以随时关闭和删除。'},
+          register: {title:'注册 Liko', submit:'注册并生成 Liko', password:'密码', hint:'注册会生成专属编号，并赠送一次外壳和肤色的自选机会。'},
           recover: {title:'用恢复码找回', submit:'重设密码', password:'新密码', hint:'填写注册时保存的恢复码。重设后旧恢复码会失效，并生成一个新的。'}
         }[mode];
         document.getElementById('authTitle').textContent = modeCopy.title;
@@ -1219,7 +1286,32 @@
       });
       document.getElementById('recoveryDone').addEventListener('click', () => {
         document.getElementById('recoverySheet').classList.remove('is-open');
-        showToast('专属 Liko 已生成');
+        if (authState.companion?.colorChoiceAvailable) openColorChoice();
+        else showToast('专属 Liko 已生成');
+      });
+      document.getElementById('colorChoiceAction').addEventListener('click', openColorChoice);
+      document.getElementById('colorCancel').addEventListener('click', () => document.getElementById('colorSheet').classList.remove('is-open'));
+      ['shellColorInput','skinColorInput'].forEach(id => document.getElementById(id).addEventListener('input', updateColorPreview));
+      document.getElementById('randomizeColors').addEventListener('click', () => {
+        const colors = randomColorPair();
+        document.getElementById('shellColorInput').value = colors.shell;
+        document.getElementById('skinColorInput').value = colors.skin;
+        updateColorPreview();
+      });
+      document.getElementById('colorForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const submit = event.currentTarget.querySelector('[type="submit"]');
+        const shell = document.getElementById('shellColorInput').value.toUpperCase();
+        const skin = document.getElementById('skinColorInput').value.toUpperCase();
+        if (colorDistance(shell, skin) < 72) { showToast('两种颜色太接近，请换一组'); return; }
+        submit.disabled = true;
+        try {
+          const result = await apiRequest('/api/auth/liko-colors', {method:'PATCH', body:JSON.stringify({shell, skin})});
+          renderAccount({...result, quota:authState.quota});
+          document.getElementById('colorSheet').classList.remove('is-open');
+          showToast('这组颜色已经保存');
+        } catch (error) { showToast(error.message); }
+        finally { submit.disabled = false; }
       });
       document.getElementById('logoutAction').addEventListener('click', async () => {
         try { await apiRequest('/api/auth/logout', {method:'POST'}); renderAccount({authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}}); await refreshAccount(); showToast('已退出登录'); }

@@ -1,5 +1,9 @@
 import colorsys
+import re
 import secrets
+
+
+HEX_COLOR_PATTERN = re.compile(r"^#[0-9A-Fa-f]{6}$")
 
 
 def _hex(rgb: tuple[int, int, int]) -> str:
@@ -42,6 +46,17 @@ def create_liko_colors() -> tuple[str, str]:
     skin = random_srgb_color()
     while _distance(shell, skin) < 72:
         skin = random_srgb_color()
+    return shell, skin
+
+
+def validate_liko_colors(shell: str, skin: str) -> tuple[str, str]:
+    """Validate a user-selected palette against the same readability rule as random colors."""
+
+    if not HEX_COLOR_PATTERN.fullmatch(shell) or not HEX_COLOR_PATTERN.fullmatch(skin):
+        raise ValueError("颜色格式不正确")
+    shell, skin = shell.upper(), skin.upper()
+    if _distance(shell, skin) < 72:
+        raise ValueError("外壳色和肤色太接近，请换一组更容易分辨的颜色")
     return shell, skin
 
 

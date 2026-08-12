@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, select
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, inspect, select, text
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -32,6 +32,7 @@ class User(Base):
     recovery_code_hash: Mapped[str | None] = mapped_column(String(64))
     shell_color: Mapped[str] = mapped_column(String(7), nullable=False)
     skin_color: Mapped[str] = mapped_column(String(7), nullable=False)
+    color_choice_available: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     memory_consent: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now, nullable=False)
@@ -72,6 +73,26 @@ class Database:
         self.engine = create_engine(url, **engine_args)
         self.sessions = sessionmaker(self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
+        self._apply_compatible_schema_updates()
+
+    def _apply_compatible_schema_updates(self) -> None:
+        """Apply small additive updates until versioned migrations are introduced."""
+
+        user_columns = {column["name"] for column in inspect(self.engine).get_columns("users")}
+        if "color_choice_available" in user_columns:
+            return
+        boolean_default = "0" if self.engine.dialect.name == "sqlite" else "FALSE"
+        with self.engine.begin() as connection:
+            connection.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN color_choice_available "
+                    f"BOOLEAN NOT NULL DEFAULT {boolean_default}"
+                )
+            )
+            if self.engine.dialect.name == "postgresql":
+                connection.execute(
+                    text("ALTER TABLE users ALTER COLUMN color_choice_available SET DEFAULT TRUE")
+                )
 
     def session(self) -> Session:
         return self.sessions()

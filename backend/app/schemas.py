@@ -32,6 +32,11 @@ class MemoryConsentRequest(BaseModel):
     enabled: bool
 
 
+class LikoColorChoiceRequest(BaseModel):
+    shell: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
+    skin: str = Field(pattern=r"^#[0-9A-Fa-f]{6}$")
+
+
 class ChatRequest(BaseModel):
     request_id: str = Field(alias="requestId", min_length=8, max_length=100)
     conversation_id: str | None = Field(default=None, alias="conversationId", max_length=100)

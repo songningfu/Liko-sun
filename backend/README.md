@@ -11,6 +11,7 @@
 - `POST /api/auth/password`：登录状态下修改密码；旧会话全部失效。
 - `POST /api/auth/recover`：使用一次性恢复码重设密码，并换发新的恢复码。
 - `PATCH /api/auth/memory-consent`：开启或关闭长期记忆。
+- `PATCH /api/auth/liko-colors`：登录用户使用注册赠送的一次机会确认外壳色与肤色；确认后由服务端锁定，未来换色需道具系统重新授权。
 - `POST /api/chat/stream`：使用 SSE 返回 `meta`、`delta`、`sources`、`done` 或 `error`。FastGPT 配置完整时代理真实问答，并兼容从工作流汇总事件恢复未进入标准文本流的最终答案；否则返回明确的联调占位提示。
 - `POST /api/answers/{answerId}/feedback`：校验反馈格式。数据库未接入前返回 `not_persisted`，不会假装保存成功。
 - `GET /api/users/me/liko`：返回当前账号正式编号、年龄与固定配色；游客不生成编号。
@@ -66,6 +67,8 @@ FastGPT 管理后台中的应用配置分为调试草稿和 API 使用的已发�
 
 Mem0 与校园知识库职责分离：Mem0 只存“关于用户的了解”，FastGPT 继续负责深圳大学事实检索。FastGPT 工作流后续需要新增 `memory_context` 文本变量，并在角色提示词中明确它只是用户背景、不能作为校园事实来源。
 
+部署后运行 `python -m scripts.verify_memory` 做真实验收。脚本使用随机临时用户检查写入、检索、跨用户隔离、修改和删除，并在结束时清理测试数据；它会产生少量模型调用费用。`/api/health` 中的 `memoryConfigured` 只说明必要环境变量齐全，不能代替这项验收。
+
 游客永远不会读写长期记忆。登录用户也必须先在账号中开启长期记忆；身份和同意状态只能由服务端会话提供，不能相信前端自行传入的 `userId`。未配置账号服务时默认依赖会把所有请求视为游客，便于本地只联调问答；生产环境必须同时配置数据库和会话密钥。
 
 ## 运行 34 个问题评测
@@ -93,6 +96,7 @@ cd backend
 - 已有 FastGPT 上游代理、标准回答流与工作流最终答案兼容、连接/读取超时和安全错误转换；尚未实现自动重试、用户主动停止和限流。
 - 没有保存完整用户问题正文的日志。
 - Liko 状态轮换仍保存在浏览器，尚未服务端同步；编号和颜色已经由数据库持久化。
+- 游客每次打开页面随机显示外壳色与肤色；新注册用户在确认首次自选后跨设备同步。升级前已有账号不自动补发机会，未来换色或补发统一由道具/运营授权处理。
 
 ## 测试服务器部署
 
@@ -101,6 +105,7 @@ cd backend
 - H5 由 Nginx 提供，`/api/` 反向代理到仅监听本机的 FastAPI。
 - FastAPI 由 `liko-api.service` 托管，部署目录为 `/opt/liko/backend`。
 - 账号数据使用独立的 `liko-postgres` 容器与持久化卷，仅监听服务器本机 `127.0.0.1:5433`，不与 FastGPT 业务表混用，也不暴露公网。
+- Mem0 使用第三套独立 PgVector，部署文件位于 `backend/deploy/memory/`，默认仅监听服务器本机 `127.0.0.1:5434`。
 - FastGPT 使用官方 Docker Compose PgVector 方案，部署目录为 `/opt/liko/fastgpt`；MongoDB、PostgreSQL、Redis、对象存储和沙箱端口均不直接暴露公网。
 - 首轮 FastGPT 导入包已上传到 `/opt/liko/release/知识库/RAG加工/FastGPT首轮导入包`。
 

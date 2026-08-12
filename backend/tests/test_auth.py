@@ -27,6 +27,7 @@ def test_account_lifecycle_liko_identity_and_quota() -> None:
         assert first_body["authenticated"] is True
         assert first_body["user"] == {"username": "alice_1", "memoryConsent": True}
         assert first_body["companion"]["displayNumber"] == "No. 000001"
+        assert first_body["companion"]["colorChoiceAvailable"] is True
         assert re.fullmatch(r"#[0-9A-F]{6}", first_body["companion"]["palette"]["shell"])
         assert "password" not in first.text.lower()
         assert "HttpOnly" in first.headers["set-cookie"]
@@ -37,6 +38,27 @@ def test_account_lifecycle_liko_identity_and_quota() -> None:
         assert me.status_code == 200
         assert me.json()["companion"]["palette"] == first_body["companion"]["palette"]
         assert "recoveryCode" not in me.json()
+
+        similar_colors = registered.patch(
+            "/api/auth/liko-colors",
+            json={"shell": "#777777", "skin": "#787878"},
+        )
+        assert similar_colors.status_code == 422
+
+        chosen = registered.patch(
+            "/api/auth/liko-colors",
+            json={"shell": "#7C4DFF", "skin": "#FFE0B2"},
+        )
+        assert chosen.status_code == 200
+        assert chosen.json()["companion"]["palette"]["shell"] == "#7C4DFF"
+        assert chosen.json()["companion"]["palette"]["skin"] == "#FFE0B2"
+        assert chosen.json()["companion"]["colorChoiceAvailable"] is False
+        repeated_choice = registered.patch(
+            "/api/auth/liko-colors",
+            json={"shell": "#0057B8", "skin": "#FFD700"},
+        )
+        assert repeated_choice.status_code == 409
+        assert "换色道具" in repeated_choice.json()["detail"]
 
         disabled = registered.patch("/api/auth/memory-consent", json={"enabled": False})
         assert disabled.status_code == 200
@@ -56,6 +78,8 @@ def test_account_lifecycle_liko_identity_and_quota() -> None:
             json={"username": "ALICE_1", "password": "correct-horse"},
         )
         assert logged_in.status_code == 200
+        assert logged_in.json()["companion"]["palette"]["shell"] == "#7C4DFF"
+        assert logged_in.json()["companion"]["colorChoiceAvailable"] is False
 
         changed = registered.post(
             "/api/auth/password",
