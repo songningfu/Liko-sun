@@ -1,0 +1,1164 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#fbf8f2" />
+  <title>Liko · 校园伴生助手</title>
+  <style>
+    :root {
+      --paper: #fbf8f2;
+      --paper-deep: #f3eee5;
+      --card: #fffdf9;
+      --ink: #302b28;
+      --muted: #817873;
+      --line: rgba(89, 71, 62, .11);
+      --berry: #e95f68;
+      --berry-soft: #f9d9d7;
+      --berry-deep: #b73d4a;
+      --skin: #fff0c7;
+      --skin-light: #fffaf0;
+      --skin-deep: #edc77e;
+      --leaf: #79b864;
+      --leaf-deep: #3e8051;
+      --shadow: 0 16px 38px rgba(75, 56, 47, .08);
+      --nav-height: 66px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { color-scheme: light; }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--ink);
+      background: #e9e5dd;
+      font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(233, 95, 104, .22);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: min(100%, 430px);
+      min-height: 100vh;
+      margin: 0 auto;
+      overflow-x: clip;
+      overflow-y: visible;
+      background:
+        radial-gradient(circle at 92% 3%, rgba(249, 217, 215, .42), transparent 240px),
+        var(--paper);
+      position: relative;
+    }
+
+    .page {
+      display: none;
+      min-height: 100vh;
+      padding: max(14px, env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom));
+      animation: page-in 180ms ease-out;
+    }
+
+    .page.is-active { display: block; }
+
+    @keyframes page-in {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .topbar {
+      min-height: 47px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 20px;
+      font-weight: 760;
+      letter-spacing: -.3px;
+    }
+
+    .brand-fruit {
+      width: 29px;
+      height: 29px;
+      border-radius: 50% 46% 52% 48%;
+      background: linear-gradient(145deg, #f47a7f, #db5360);
+      box-shadow: 0 5px 10px rgba(202, 69, 82, .16);
+      transform: rotate(-8deg);
+      position: relative;
+    }
+
+    .brand-fruit::before {
+      width: 12px;
+      height: 7px;
+      content: "";
+      position: absolute;
+      top: -4px;
+      right: -1px;
+      border-radius: 100% 0 100% 0;
+      background: var(--leaf);
+      transform: rotate(-18deg);
+    }
+
+    .icon-button {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 0;
+      border-radius: 14px;
+      color: #6f6761;
+      background: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .icon-button:active { background: var(--paper-deep); }
+    .icon-button svg { width: 21px; height: 21px; }
+
+    /* Liko 角色主页 */
+    .companion-view { display: block; }
+    .chat-view { display: none; }
+    body.chat-mode .companion-view { display: none; }
+    body.chat-mode .chat-view { display: block; animation: chat-arrive 320ms cubic-bezier(.2,.72,.2,1); }
+
+    @keyframes chat-arrive {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .companion-heading {
+      margin: 13px 2px 5px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: -.6px;
+    }
+
+    .companion-subtitle {
+      margin: 0 2px 17px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .companion-card {
+      min-height: 0;
+      padding: 16px 16px 18px;
+      border: 1px solid rgba(223, 207, 195, .74);
+      border-radius: 30px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 76% 15%, rgba(255,255,255,.86), transparent 28%),
+        linear-gradient(150deg, #f9e4df 0%, #f7eee3 52%, #eaf0e5 100%);
+      box-shadow: var(--shadow);
+      position: relative;
+      isolation: isolate;
+    }
+
+    .companion-card::after {
+      width: 170px;
+      height: 170px;
+      content: "";
+      position: absolute;
+      right: -75px;
+      bottom: -82px;
+      z-index: -1;
+      border: 1px solid rgba(255,255,255,.55);
+      border-radius: 50%;
+    }
+
+    .identity-line {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .serial-pill {
+      min-height: 31px;
+      padding: 6px 10px;
+      border: 1px solid rgba(101, 78, 70, .08);
+      border-radius: 999px;
+      background: rgba(255,255,255,.64);
+      color: #765e59;
+      font-size: 11px;
+      font-weight: 680;
+      backdrop-filter: blur(8px);
+    }
+
+    .serial-pill { letter-spacing: .6px; color: #574d48; }
+
+    .mascot-stage {
+      width: 100%;
+      height: 282px;
+      margin: 8px auto 0;
+      display: grid;
+      place-items: center;
+      position: relative;
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .companion-mascot {
+      width: min(100%, 260px);
+      height: auto;
+      overflow: visible;
+      --shell: #e95f68;
+      --shell-light: #ff8a8f;
+      --shell-deep: #b93e4b;
+      --skin: #fff0c7;
+      --skin-light: #fffaf0;
+      --skin-deep: #edc77e;
+      --leaf: #78bd63;
+      --leaf-deep: #3f8e55;
+      --ink: #4a3540;
+      filter: drop-shadow(0 16px 15px color-mix(in srgb, var(--shell-deep) 18%, transparent));
+      view-transition-name: liko-shared;
+    }
+
+    /* 以下角色图层与动画直接复用形象设计/liko-animation-demo.html */
+    .liko-character {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+      animation: idleBreathe 3.2s ease-in-out infinite;
+    }
+
+    .shell-fill { fill: url(#shellGradient); }
+    .shell-stroke { stroke: var(--shell-deep); }
+    .skin-fill { fill: url(#skinGradient); }
+    .skin-solid { fill: var(--skin); }
+    .skin-stroke { stroke: var(--skin-deep); }
+    .ink-fill { fill: var(--ink); }
+
+    .shell-outline {
+      stroke: var(--shell-deep);
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .inner-outline {
+      stroke: var(--skin-deep);
+      stroke-width: 4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .leaf {
+      fill: url(#leafGradient);
+      stroke: var(--leaf-deep);
+      stroke-width: 4;
+      stroke-linejoin: round;
+    }
+
+    .leaf-cluster {
+      transform-box: fill-box;
+      transform-origin: 35% 90%;
+      animation: leafSway 3.2s ease-in-out infinite;
+    }
+
+    .eye {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: blink 4.6s ease-in-out infinite;
+    }
+
+    .cheek { fill: #ef8f9a; opacity: .6; }
+
+    .state-layer { display: none; }
+    #companionLiko[data-state="idle"] .state-idle,
+    #companionLiko[data-state="study"] .state-study,
+    #companionLiko[data-state="music"] .state-music,
+    #companionLiko[data-state="fitness"] .state-fitness,
+    #companionLiko[data-state="gaming"] .state-gaming { display: block; }
+
+    #companionLiko[data-state="study"] .liko-character { animation: studyBob 2.7s ease-in-out infinite; }
+    #companionLiko[data-state="music"] .liko-character { animation: musicSway 1.15s ease-in-out infinite alternate; }
+    #companionLiko[data-state="fitness"] .liko-character { animation: squat 1.5s ease-in-out infinite; }
+    #companionLiko[data-state="gaming"] .liko-character { animation: gameBounce 1.7s ease-in-out infinite; }
+
+    .wave-hand {
+      transform-box: fill-box;
+      transform-origin: 35% 85%;
+      animation: handWave 1.8s ease-in-out infinite;
+    }
+
+    .idle-dot-a { animation: idleDot 2.8s ease-in-out infinite; }
+    .idle-dot-b { animation: idleDot 2.8s .45s ease-in-out infinite; }
+    .idle-dot-c { animation: idleDot 2.8s .9s ease-in-out infinite; }
+
+    .book {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: bookFloat 2.7s ease-in-out infinite;
+    }
+
+    .page-flip {
+      transform-box: fill-box;
+      transform-origin: left bottom;
+      animation: pageFlip 3.6s ease-in-out infinite;
+    }
+
+    .study-spark {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: sparkle 2.5s ease-in-out infinite;
+    }
+
+    .headphone-band {
+      fill: none;
+      stroke: #6d68c9;
+      stroke-width: 12;
+      stroke-linecap: round;
+    }
+
+    .headphone-pad {
+      fill: #756fda;
+      stroke: #4e489f;
+      stroke-width: 3;
+    }
+
+    .music-note-a { animation: noteRise 2.2s ease-out infinite; }
+    .music-note-b { animation: noteRise 2.2s .7s ease-out infinite; }
+    .music-note-c { animation: noteRise 2.2s 1.35s ease-out infinite; }
+
+    .fitness-arms,
+    .fitness-bar {
+      transform-box: fill-box;
+      transform-origin: center bottom;
+      animation: lift 1.5s ease-in-out infinite;
+    }
+
+    .sweat {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: sweatDrop 1.5s ease-in infinite;
+    }
+
+    .controller {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: controllerTap .65s ease-in-out infinite alternate;
+    }
+
+    .game-glow-a { animation: gamePixel 1.5s ease-out infinite; }
+    .game-glow-b { animation: gamePixel 1.5s .55s ease-out infinite; }
+
+    @keyframes idleBreathe {
+      0%, 100% { transform: translateY(1px) scale(1); }
+      50% { transform: translateY(-5px) scale(1.012, .99); }
+    }
+    @keyframes studyBob {
+      0%, 100% { transform: translateY(1px) rotate(-.4deg); }
+      50% { transform: translateY(-4px) rotate(.4deg); }
+    }
+    @keyframes musicSway {
+      from { transform: translate(-5px, 1px) rotate(-2deg); }
+      to { transform: translate(5px, -4px) rotate(2deg); }
+    }
+    @keyframes squat {
+      0%, 100% { transform: translateY(-5px) scaleY(1.02); }
+      50% { transform: translateY(13px) scale(1.018, .95); }
+    }
+    @keyframes gameBounce {
+      0%, 100% { transform: translateY(2px) rotate(-.6deg); }
+      50% { transform: translateY(-6px) rotate(.6deg); }
+    }
+    @keyframes leafSway {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(4deg); }
+    }
+    @keyframes blink {
+      0%, 43%, 47%, 100% { transform: scaleY(1); }
+      45% { transform: scaleY(.1); }
+    }
+    @keyframes handWave {
+      0%, 100% { transform: rotate(-5deg); }
+      50% { transform: rotate(16deg) translateY(-2px); }
+    }
+    @keyframes idleDot {
+      0%, 22%, 100% { transform: translateY(8px) scale(.55); opacity: 0; }
+      42%, 72% { transform: translateY(0) scale(1); opacity: .75; }
+    }
+    @keyframes bookFloat {
+      0%, 100% { transform: translateY(1px) rotate(-.7deg); }
+      50% { transform: translateY(-4px) rotate(.7deg); }
+    }
+    @keyframes pageFlip {
+      0%, 18%, 100% { transform: scaleX(1) skewX(0); opacity: .9; }
+      45% { transform: scaleX(.18) skewX(-17deg); opacity: .35; }
+      62% { transform: scaleX(1) skewX(7deg); opacity: .9; }
+    }
+    @keyframes sparkle {
+      0%, 22%, 100% { transform: scale(.4) rotate(-12deg); opacity: 0; }
+      42%, 70% { transform: scale(1) rotate(8deg); opacity: 1; }
+    }
+    @keyframes noteRise {
+      0% { transform: translateY(16px) scale(.7); opacity: 0; }
+      20%, 76% { opacity: 1; }
+      100% { transform: translateY(-30px) scale(1.08) rotate(8deg); opacity: 0; }
+    }
+    @keyframes lift {
+      0%, 100% { transform: translateY(18px); }
+      50% { transform: translateY(-15px); }
+    }
+    @keyframes sweatDrop {
+      0%, 40% { transform: translateY(0) scale(.6); opacity: 0; }
+      55% { opacity: 1; }
+      100% { transform: translate(5px, 24px) scale(1); opacity: 0; }
+    }
+    @keyframes controllerTap {
+      from { transform: rotate(-2deg) translateY(1px); }
+      to { transform: rotate(2deg) translateY(-2px); }
+    }
+    @keyframes gamePixel {
+      0% { transform: translateY(12px) scale(.4); opacity: 0; }
+      25%, 70% { opacity: 1; }
+      100% { transform: translateY(-25px) scale(1.1) rotate(16deg); opacity: 0; }
+    }
+
+    .companion-message {
+      margin: -2px auto 0;
+      max-width: 290px;
+      text-align: center;
+    }
+
+    .companion-message strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .companion-message span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .profile-strip {
+      margin-top: 13px;
+      padding: 15px 16px;
+      border: 1px solid var(--line);
+      border-radius: 21px;
+      background: var(--card);
+      box-shadow: 0 9px 25px rgba(74,59,49,.04);
+    }
+
+    .profile-facts {
+      display: grid;
+      grid-template-columns: repeat(2,minmax(0,1fr));
+      gap: 10px;
+    }
+
+    .profile-fact span { display:block; color:var(--muted); font-size:11px; }
+    .profile-fact strong { display:block; margin-top:3px; font-size:14px; }
+    .personality { margin:13px 0 0; padding-top:12px; border-top:1px solid var(--line); color:#5f5752; font-size:13px; line-height:1.65; }
+
+    .ask-button {
+      width: 100%;
+      min-height: 54px;
+      margin-top: 13px;
+      border: 0;
+      border-radius: 18px;
+      background: #3a3430;
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      box-shadow: 0 11px 22px rgba(45,39,36,.13);
+      cursor: pointer;
+    }
+
+    .ask-button:active { transform: translateY(1px); }
+
+    /* Chat */
+    .chat-header {
+      min-height: 52px;
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      align-items: center;
+      gap: 8px;
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      background: color-mix(in srgb, var(--paper) 90%, transparent);
+      backdrop-filter: blur(14px);
+    }
+
+    .chat-title { text-align:center; }
+    .chat-title strong { display:block; font-size:15px; }
+    .chat-title span { display:block; margin-top:1px; color:var(--muted); font-size:10px; }
+
+    .chat-avatar {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,.86);
+      background: var(--berry-soft);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 5px 12px rgba(115,67,62,.12);
+      view-transition-name: liko-shared;
+    }
+
+    body:not(.chat-mode) .chat-avatar { view-transition-name: none; }
+    body.chat-mode .companion-mascot { view-transition-name: none; }
+    .chat-avatar svg { width:31px; height:31px; }
+
+    ::view-transition-old(liko-shared) { animation: shared-old 360ms cubic-bezier(.2,.7,.2,1) both; }
+    ::view-transition-new(liko-shared) { animation: shared-new 360ms cubic-bezier(.2,.7,.2,1) both; }
+    ::view-transition-group(liko-shared) { animation-duration: 360ms; }
+
+    @keyframes shared-old { to { opacity:.35; filter:blur(2px); } }
+    @keyframes shared-new { from { opacity:.45; filter:blur(2px); } }
+
+    .hot-section { margin: 15px 0 18px; }
+    .section-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin:0 2px 10px; }
+    .section-heading strong { font-size:16px; }
+    .section-heading span { color:var(--muted); font-size:11px; }
+
+    .hot-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+    .hot-question {
+      min-height: 76px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--card);
+      color: #4d4742;
+      text-align: left;
+      line-height: 1.45;
+      cursor: pointer;
+    }
+    .hot-question strong { display:block; font-size:13px; font-weight:650; }
+    .hot-question span { display:block; margin-top:5px; color:#9a706a; font-size:10px; }
+    .hot-question:active { background:#f8f2eb; }
+
+    .conversation { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+    .user-message { max-width:82%; margin:0 0 11px auto; padding:11px 14px; border-radius:18px 18px 5px 18px; background:#3b3531; color:white; font-size:14px; line-height:1.55; }
+
+    .answer-card {
+      padding: 17px 16px 13px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card);
+      box-shadow: 0 10px 26px rgba(65,52,45,.05);
+    }
+
+    .answer-head { display:flex; align-items:center; gap:10px; margin-bottom:13px; }
+    .answer-avatar { width:35px; height:35px; border-radius:50%; background:var(--berry-soft); display:grid; place-items:center; flex:none; }
+    .answer-avatar svg { width:29px; height:29px; }
+    .answer-name { font-size:14px; font-weight:700; }
+    .answer-note { margin-top:1px; color:var(--muted); font-size:10px; }
+
+    .answer-body { font-size:15px; line-height:1.72; }
+    .answer-body p { margin:0 0 11px; }
+    .answer-body p:last-child { margin-bottom:0; }
+    .answer-body strong { font-weight:720; }
+    .answer-list { margin:11px 0; padding:0; list-style:none; }
+    .answer-list li { display:grid; grid-template-columns:22px 1fr; gap:7px; margin:9px 0; }
+    .answer-list li > span { width:20px; height:20px; border-radius:50%; background:#edf1e7; color:#60725d; display:grid; place-items:center; font-size:11px; font-weight:700; }
+
+    .sources { margin-top:15px; padding-top:12px; border-top:1px solid var(--line); }
+    .sources-title { display:flex; justify-content:space-between; margin-bottom:8px; color:#6e6660; font-size:11px; }
+    .source-link { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 10px; border-radius:13px; background:#f7f3ed; color:#4d4742; text-decoration:none; }
+    .source-link + .source-link { margin-top:6px; }
+    .source-link strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
+    .source-link span { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+    .source-copy { min-width:0; }
+    .source-arrow { color:#948d86; flex:none; }
+
+    .answer-meta { min-height:38px; margin-top:9px; display:flex; align-items:center; justify-content:space-between; gap:7px; }
+    .answer-time { color:#918a84; font-size:10px; }
+    .answer-actions { display:flex; gap:1px; }
+    .answer-action { width:38px; height:36px; padding:0; border:0; border-radius:12px; background:transparent; color:#817a74; display:grid; place-items:center; cursor:pointer; }
+    .answer-action svg { width:18px; height:18px; }
+    .answer-action.is-selected { background:#f2ece5; color:#3f3935; }
+
+    .feedback-note { display:none; margin:1px 0 5px; color:#8b817a; font-size:10px; }
+    .feedback-note.is-visible { display:block; }
+
+    .composer-dock {
+      width: min(100%,430px);
+      padding: 8px 15px 9px;
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--nav-height) + env(safe-area-inset-bottom));
+      z-index: 20;
+      transform: translateX(-50%);
+      background: linear-gradient(to top, var(--paper) 74%, rgba(251,248,242,.88));
+    }
+
+    .composer-dock.is-hidden { display:none; }
+    .composer { min-height:52px; padding:5px 6px 5px 15px; border:1px solid rgba(89,71,62,.13); border-radius:18px; background:#fffefa; box-shadow:0 10px 26px rgba(65,52,45,.08); display:flex; align-items:center; gap:8px; }
+    .composer input { width:100%; min-width:0; height:40px; padding:0; border:0; outline:0; background:transparent; color:var(--ink); font-size:16px; }
+    .composer input::placeholder { color:#aaa19a; }
+    .send-button { width:42px; height:42px; padding:0; border:0; border-radius:14px; background:var(--berry); color:white; display:grid; place-items:center; cursor:pointer; flex:none; box-shadow:0 7px 14px rgba(211,70,83,.2); }
+    .send-button svg { width:19px; height:19px; }
+
+    /* 我的 */
+    .page-title { margin:10px 2px 19px; font-size:28px; letter-spacing:-.7px; }
+    .mine-card { padding:19px; border:1px solid rgba(226,211,198,.75); border-radius:28px; background:linear-gradient(150deg,#f8e4df,#f6eee5 58%,#e8eee3); box-shadow:var(--shadow); }
+    .mine-top { display:flex; align-items:center; gap:15px; }
+    .mine-portrait { width:105px; height:110px; flex:none; filter:drop-shadow(0 9px 9px rgba(146,71,62,.12)); }
+    .mine-name { font-size:23px; font-weight:760; }
+    .mine-desc { margin-top:8px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .color-row { margin-top:13px; padding:11px 13px; border-radius:16px; background:rgba(255,255,255,.58); display:flex; justify-content:space-around; gap:12px; }
+    .color-item { display:flex; align-items:center; gap:8px; }
+    .color-dot { width:23px; height:23px; border:3px solid rgba(255,255,255,.8); border-radius:50%; box-shadow:0 0 0 1px rgba(91,67,52,.12); }
+    .color-dot.shell { background:var(--berry); }
+    .color-dot.skin { background:var(--skin); }
+    .color-copy span { display:block; color:var(--muted); font-size:10px; }
+    .color-copy strong { display:block; font-size:12px; }
+    .settings-label { margin:24px 2px 9px; color:var(--muted); font-size:12px; font-weight:700; }
+    .settings-card { padding:0 15px; border:1px solid var(--line); border-radius:21px; background:var(--card); }
+    .setting-row { width:100%; min-height:58px; padding:0; border:0; border-bottom:1px solid var(--line); background:transparent; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#48423e; text-align:left; cursor:pointer; }
+    .setting-row:last-child { border-bottom:0; }
+    .setting-main { display:flex; align-items:center; gap:11px; font-size:14px; font-weight:650; }
+    .setting-icon { width:31px; height:31px; border-radius:10px; background:#f4efe8; display:grid; place-items:center; color:#6b645e; }
+    .setting-icon svg { width:17px; height:17px; }
+    .setting-side { color:#99918a; font-size:11px; }
+
+    /* 底部导航 */
+    .bottom-nav {
+      width: min(100%,430px);
+      height: calc(var(--nav-height) + env(safe-area-inset-bottom));
+      padding: 5px 42px env(safe-area-inset-bottom);
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 30;
+      transform: translateX(-50%);
+      border-top: 1px solid var(--line);
+      background: rgba(255,253,249,.94);
+      backdrop-filter: blur(18px);
+      display:flex;
+      align-items:center;
+      justify-content:space-around;
+      gap:42px;
+    }
+
+    .nav-button { min-width:100px; height:54px; padding:5px 16px; border:0; border-radius:17px; background:transparent; color:#857d77; display:grid; place-items:center; align-content:center; gap:2px; cursor:pointer; }
+    .nav-button svg { width:20px; height:20px; }
+    .nav-button span { font-size:11px; }
+    .nav-button.is-active { color:#332e2b; background:#f5ede6; font-weight:700; }
+
+    .toast { max-width:calc(100% - 44px); padding:9px 14px; border-radius:999px; position:fixed; left:50%; bottom:calc(138px + env(safe-area-inset-bottom)); z-index:60; transform:translate(-50%,10px); background:#3d3834; color:white; font-size:11px; opacity:0; pointer-events:none; transition:.18s ease; white-space:nowrap; }
+    .toast.is-visible { opacity:1; transform:translate(-50%,0); }
+
+    .feedback-sheet { display:none; position:fixed; inset:0; z-index:80; background:rgba(40,34,31,.18); align-items:flex-end; justify-content:center; }
+    .feedback-sheet.is-open { display:flex; }
+    .feedback-panel { width:min(100%,430px); padding:18px 17px calc(20px + env(safe-area-inset-bottom)); border-radius:25px 25px 0 0; background:var(--card); box-shadow:0 -16px 40px rgba(45,37,32,.13); animation:sheet-in 240ms ease-out; }
+    @keyframes sheet-in { from { transform:translateY(100%); } to { transform:translateY(0); } }
+    .feedback-panel h2 { margin:0; font-size:17px; }
+    .feedback-panel p { margin:5px 0 13px; color:var(--muted); font-size:11px; }
+    .reason-grid { display:flex; flex-wrap:wrap; gap:8px; }
+    .reason-button { min-height:38px; padding:8px 12px; border:1px solid var(--line); border-radius:13px; background:#f8f3ed; color:#5e5650; font-size:12px; cursor:pointer; }
+    .reason-button:active { background:#f1e8df; }
+    .sheet-close { width:100%; min-height:45px; margin-top:14px; border:0; border-radius:14px; background:#3b3531; color:white; font-weight:700; cursor:pointer; }
+
+    .visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+    @media (min-width:431px) {
+      body { padding:18px 0; }
+      .app { min-height:calc(100vh - 36px); border-radius:30px; box-shadow:0 18px 60px rgba(41,34,29,.13); }
+    }
+
+    @media (max-width:350px) {
+      .page { padding-left:13px; padding-right:13px; }
+      .companion-card { min-height:0; }
+      .mascot-stage { height:252px; }
+      .companion-mascot { width:232px; }
+      .hot-grid { grid-template-columns:1fr; }
+      .hot-question { min-height:58px; }
+      .mine-portrait { width:88px; height:94px; }
+      .bottom-nav { gap:20px; padding-left:28px; padding-right:28px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
+      ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*) { animation-duration:.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="page is-active" id="likoPage" data-page="liko" aria-label="Liko">
+      <div class="companion-view" id="companionView">
+        <header class="topbar">
+          <div class="brand"><span class="brand-fruit" aria-hidden="true"></span><span>Liko</span></div>
+          <span aria-hidden="true"></span>
+        </header>
+
+        <h1 class="companion-heading">今天也有 Liko 陪你</h1>
+        <p class="companion-subtitle">今天也在认真体验校园生活。</p>
+
+        <section class="companion-card" aria-label="Liko 角色主页">
+          <div class="identity-line">
+            <span class="serial-pill">No. 000128</span>
+          </div>
+
+          <div class="mascot-stage">
+            <svg id="companionLiko" class="companion-mascot" data-state="idle" viewBox="0 0 420 440" role="img" aria-labelledby="likoTitle likoDesc">
+              <title id="likoTitle">Liko 待机动画</title>
+              <desc id="likoDesc">一个穿着完整荔枝壳的柔软小角色，前部开口露出脸，手脚与内层本体同色，顶部有枝梗和两片叶子。</desc>
+              <defs>
+                <linearGradient id="shellGradient" x1=".16" y1=".08" x2=".86" y2=".95">
+                  <stop offset="0" style="stop-color:var(--shell-light)" />
+                  <stop offset=".58" style="stop-color:var(--shell)" />
+                  <stop offset="1" style="stop-color:var(--shell-deep)" />
+                </linearGradient>
+                <linearGradient id="skinGradient" x1=".18" y1=".08" x2=".78" y2=".96">
+                  <stop offset="0" style="stop-color:var(--skin-light)" />
+                  <stop offset=".68" style="stop-color:var(--skin)" />
+                  <stop offset="1" style="stop-color:var(--skin-deep)" />
+                </linearGradient>
+                <linearGradient id="leafGradient" x1=".2" y1=".1" x2=".85" y2=".9">
+                  <stop offset="0" style="stop-color:#a9dc78" />
+                  <stop offset="1" style="stop-color:var(--leaf)" />
+                </linearGradient>
+                <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="7" />
+                </filter>
+              </defs>
+
+              <ellipse cx="210" cy="402" rx="118" ry="17" fill="var(--shell)" opacity=".14" />
+
+              <g class="liko-character">
+                <!-- 脚和枝叶从完整外壳后方伸出 -->
+                <ellipse class="skin-fill inner-outline" cx="164" cy="367" rx="35" ry="25" transform="rotate(-10 164 367)" />
+                <ellipse class="skin-fill inner-outline" cx="256" cy="367" rx="35" ry="25" transform="rotate(10 256 367)" />
+
+                <path d="M231 91 C234 64 244 45 258 26" fill="none" stroke="#9b673e" stroke-width="14" stroke-linecap="round" />
+                <g class="leaf-cluster">
+                  <path class="leaf" d="M250 53 C271 22 313 18 333 39 C310 62 277 70 250 53 Z" />
+                  <path class="leaf" d="M259 55 C290 48 319 65 322 91 C290 94 266 80 259 55 Z" />
+                  <path d="M260 54 C282 46 302 39 321 38 M270 62 C286 69 300 78 313 87" fill="none" stroke="var(--leaf-deep)" stroke-width="3" stroke-linecap="round" opacity=".7" />
+                </g>
+
+                <!-- 完整外壳背板 -->
+                <path class="shell-fill shell-outline" d="M210 70 C231 63 250 70 262 87 C283 77 306 86 313 105 C335 101 352 117 350 138 C371 145 378 167 367 185 C385 200 385 224 368 239 C381 258 372 281 351 288 C356 311 339 330 316 329 C312 351 291 362 270 352 C258 373 230 375 211 359 C192 375 164 371 152 351 C129 360 107 347 104 325 C80 326 64 306 71 283 C50 274 45 250 60 233 C43 216 47 191 66 180 C56 158 68 137 89 132 C87 110 105 94 127 98 C138 79 160 73 178 87 C188 76 198 71 210 70 Z" />
+
+                <!-- 开口中的内层本体 -->
+                <path class="skin-fill inner-outline" d="M210 123 C264 122 300 158 301 221 C302 282 271 318 210 322 C149 318 118 282 119 221 C120 158 156 122 210 123 Z" />
+                <ellipse cx="175" cy="162" rx="30" ry="16" fill="var(--skin-light)" opacity=".45" transform="rotate(-20 175 162)" />
+
+                <!-- 外壳前沿：覆盖内层边缘，明确表达“壳穿在外面” -->
+                <path class="shell-fill shell-outline" fill-rule="evenodd" d="M210 70 C231 63 250 70 262 87 C283 77 306 86 313 105 C335 101 352 117 350 138 C371 145 378 167 367 185 C385 200 385 224 368 239 C381 258 372 281 351 288 C356 311 339 330 316 329 C312 351 291 362 270 352 C258 373 230 375 211 359 C192 375 164 371 152 351 C129 360 107 347 104 325 C80 326 64 306 71 283 C50 274 45 250 60 233 C43 216 47 191 66 180 C56 158 68 137 89 132 C87 110 105 94 127 98 C138 79 160 73 178 87 C188 76 198 71 210 70 Z M210 111 C143 111 105 155 106 225 C107 294 143 332 210 335 C277 332 313 294 314 225 C315 155 277 111 210 111 Z" opacity=".98" />
+
+                <!-- 荔枝壳纹理，固定在服装上，非随机配饰 -->
+                <g fill="none" stroke="var(--shell-light)" stroke-width="3" stroke-linecap="round" opacity=".65">
+                  <path d="M119 126 q10 -8 20 0 M88 184 q10 -8 20 1 M90 266 q10 -7 20 1 M126 323 q10 -7 20 1" />
+                  <path d="M281 119 q10 -7 20 1 M320 177 q10 -7 20 1 M316 265 q10 -7 20 1 M276 327 q10 -7 20 1" />
+                </g>
+
+                <!-- 通用脸部 -->
+                <ellipse class="eye ink-fill" cx="181" cy="214" rx="8" ry="11" />
+                <ellipse class="eye ink-fill" cx="239" cy="214" rx="8" ry="11" />
+                <ellipse class="cheek" cx="160" cy="241" rx="15" ry="7" />
+                <ellipse class="cheek" cx="260" cy="241" rx="15" ry="7" />
+
+                <!-- 待机：轻呼吸、眨眼、挥手 -->
+                <g class="state-layer state-idle">
+                  <path d="M191 241 Q210 255 229 241" fill="none" stroke="var(--ink)" stroke-width="6" stroke-linecap="round" />
+                  <ellipse class="skin-fill inner-outline" cx="135" cy="272" rx="21" ry="18" transform="rotate(-18 135 272)" />
+                  <g class="wave-hand">
+                    <path d="M282 271 Q299 253 299 230" fill="none" stroke="var(--skin)" stroke-width="17" stroke-linecap="round" />
+                    <ellipse class="skin-fill inner-outline" cx="301" cy="224" rx="18" ry="21" transform="rotate(12 301 224)" />
+                  </g>
+                  <circle class="idle-dot-a" cx="330" cy="189" r="5" fill="var(--shell)" opacity=".7" />
+                  <circle class="idle-dot-b" cx="345" cy="173" r="7" fill="var(--shell)" opacity=".55" />
+                  <circle class="idle-dot-c" cx="363" cy="151" r="9" fill="var(--shell)" opacity=".4" />
+                </g>
+
+                <!-- 学习：书本和翻页 -->
+                <g class="state-layer state-study">
+                  <path d="M195 241 Q210 251 225 241" fill="none" stroke="var(--ink)" stroke-width="5" stroke-linecap="round" />
+                  <g class="book">
+                    <path d="M118 263 Q161 245 207 269 L207 326 Q163 302 118 315 Z" fill="#f7a557" stroke="#c96a42" stroke-width="4" stroke-linejoin="round" />
+                    <path d="M302 263 Q259 245 213 269 L213 326 Q257 302 302 315 Z" fill="#ffbd68" stroke="#c96a42" stroke-width="4" stroke-linejoin="round" />
+                    <path d="M207 269 H213 V326 H207 Z" fill="#fff7e5" />
+                    <path d="M134 272 Q166 261 195 276 M285 272 Q254 261 225 276 M138 287 Q166 278 194 290 M282 287 Q254 278 226 290" fill="none" stroke="#b96b55" stroke-width="3" stroke-linecap="round" opacity=".6" />
+                    <path class="page-flip" d="M213 269 Q251 242 292 259 L292 278 Q252 263 213 282 Z" fill="#fff7e7" opacity=".92" />
+                  </g>
+                  <ellipse class="skin-fill inner-outline" cx="149" cy="287" rx="19" ry="17" transform="rotate(-18 149 287)" />
+                  <ellipse class="skin-fill inner-outline" cx="271" cy="287" rx="19" ry="17" transform="rotate(18 271 287)" />
+                  <path class="study-spark" d="M304 185 l5 12 12 5-12 5-5 12-5-12-12-5 12-5Z" fill="#f6bb50" />
+                </g>
+
+                <!-- 听歌：耳机只在此状态出现，整套耳机佩戴在完整外壳外侧 -->
+                <g class="state-layer state-music">
+                  <path class="headphone-band" d="M78 217 C78 129 132 78 210 78 C288 78 342 129 342 217" />
+                  <rect class="headphone-pad" x="57" y="191" width="40" height="70" rx="19" />
+                  <rect class="headphone-pad" x="323" y="191" width="40" height="70" rx="19" />
+                  <rect x="67" y="202" width="12" height="47" rx="6" fill="#bdb9ff" opacity=".9" />
+                  <rect x="341" y="202" width="12" height="47" rx="6" fill="#bdb9ff" opacity=".9" />
+                  <path d="M187 241 Q210 260 233 241" fill="none" stroke="var(--ink)" stroke-width="6" stroke-linecap="round" />
+                  <ellipse class="skin-fill inner-outline" cx="143" cy="278" rx="20" ry="17" transform="rotate(-12 143 278)" />
+                  <ellipse class="skin-fill inner-outline" cx="277" cy="278" rx="20" ry="17" transform="rotate(12 277 278)" />
+                  <g class="music-note-a" fill="#6d68c9" transform="translate(104 167)"><circle cx="0" cy="12" r="8" /><path d="M6 12 V-16 H22" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></g>
+                  <g class="music-note-b" fill="#ef7785" transform="translate(315 185)"><circle cx="0" cy="12" r="8" /><path d="M6 12 V-18 L23 -13" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" /></g>
+                  <g class="music-note-c" fill="#f2b74e" transform="translate(330 267)"><circle cx="0" cy="10" r="7" /><path d="M5 10 V-13 H18" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" /></g>
+                </g>
+
+                <!-- 健身：手臂、手和杠铃一起上下 -->
+                <g class="state-layer state-fitness">
+                  <path d="M190 244 Q210 231 230 244" fill="none" stroke="var(--ink)" stroke-width="5" stroke-linecap="round" />
+                  <g class="fitness-arms">
+                    <path d="M151 255 Q155 203 172 160 M269 255 Q265 203 248 160" fill="none" stroke="var(--skin)" stroke-width="17" stroke-linecap="round" />
+                    <ellipse class="skin-fill inner-outline" cx="173" cy="157" rx="18" ry="16" />
+                    <ellipse class="skin-fill inner-outline" cx="247" cy="157" rx="18" ry="16" />
+                  </g>
+                  <g class="fitness-bar">
+                    <path d="M108 139 H312" fill="none" stroke="#594a55" stroke-width="9" stroke-linecap="round" />
+                    <rect x="88" y="118" width="18" height="43" rx="6" fill="#6d68c9" />
+                    <rect x="69" y="112" width="17" height="55" rx="6" fill="#4f4a9f" />
+                    <rect x="314" y="118" width="18" height="43" rx="6" fill="#6d68c9" />
+                    <rect x="334" y="112" width="17" height="55" rx="6" fill="#4f4a9f" />
+                  </g>
+                  <path class="sweat" d="M270 188 C280 199 280 208 270 212 C260 208 260 199 270 188 Z" fill="#75b9e7" />
+                </g>
+
+                <!-- 游戏：手柄和双手 -->
+                <g class="state-layer state-gaming">
+                  <path d="M187 241 Q210 259 233 241" fill="none" stroke="var(--ink)" stroke-width="6" stroke-linecap="round" />
+                  <g class="controller">
+                    <path d="M142 274 Q210 252 278 274 L293 309 Q297 326 281 330 Q264 332 250 309 H170 Q156 332 139 330 Q123 326 127 309 Z" fill="#6d68c9" stroke="#4d488e" stroke-width="4" stroke-linejoin="round" />
+                    <path d="M158 294 H180 M169 283 V305" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" />
+                    <circle cx="249" cy="287" r="6" fill="#ffcf5d" />
+                    <circle cx="267" cy="300" r="6" fill="#ff8496" />
+                    <circle cx="246" cy="307" r="6" fill="#75d3bf" />
+                  </g>
+                  <ellipse class="skin-fill inner-outline" cx="155" cy="292" rx="20" ry="17" transform="rotate(-10 155 292)" />
+                  <ellipse class="skin-fill inner-outline" cx="265" cy="292" rx="20" ry="17" transform="rotate(10 265 292)" />
+                  <rect class="game-glow-a" x="105" y="244" width="11" height="11" rx="2" fill="#f0b64f" />
+                  <path class="game-glow-b" d="M304 226 l5 11 11 5-11 5-5 11-5-11-11-5 11-5Z" fill="#78cdb7" />
+                </g>
+
+                <!-- 前下部固定编号牌：无名字前缀 -->
+                <g aria-label="唯一编号 No. 000128">
+                  <rect x="162" y="337" width="96" height="27" rx="11" fill="#fffaf1" stroke="var(--shell-deep)" stroke-width="3" />
+                  <text x="210" y="355" text-anchor="middle" fill="#694c56" font-family="system-ui, sans-serif" font-size="12" font-weight="700" letter-spacing="1">No. 000128</text>
+                </g>
+              </g>
+            </svg>
+          </div>
+
+          <div class="companion-message">
+            <strong id="stateMessage">我在这儿，随时都可以叫我。</strong>
+            <span id="stateDetail">轻轻呼吸，等你一起逛校园。</span>
+          </div>
+        </section>
+
+        <button class="ask-button" type="button" id="enterChat">问问 Liko</button>
+
+        <section class="profile-strip" aria-label="Liko 的信息">
+          <div class="profile-facts">
+            <div class="profile-fact"><span>年龄</span><strong>12 天大</strong></div>
+            <div class="profile-fact"><span>今天的状态</span><strong id="profileState">安静待机</strong></div>
+          </div>
+          <p class="personality">有点慢热，但很会记住你在意的小事。最近喜欢傍晚吹风，也愿意陪你把校园里的问题慢慢弄清楚。</p>
+        </section>
+      </div>
+
+      <div class="chat-view" id="chatView">
+        <header class="chat-header">
+          <button class="icon-button" type="button" id="backToLiko" aria-label="返回 Liko 主页">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          </button>
+          <div class="chat-title"><strong>问 Liko</strong><span>校园里的事，慢慢问</span></div>
+          <div class="chat-avatar" aria-hidden="true">
+            <svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="#e95f68"/><circle cx="30" cy="31" r="16" fill="#fff0c7"/><circle cx="25" cy="29" r="2" fill="#4a3540"/><circle cx="35" cy="29" r="2" fill="#4a3540"/><path d="M26 36q4 3 8 0" fill="none" stroke="#4a3540" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
+          </div>
+        </header>
+
+        <section class="hot-section" aria-label="高频问题推荐">
+          <div class="section-heading"><strong>最近大家都在问</strong><span>结合近期热度推荐</span></div>
+          <div class="hot-grid">
+            <button class="hot-question" type="button" data-question="丽湖校区图书馆几点关门？"><strong>图书馆几点关门？</strong><span>今日更新 · 学习资源</span></button>
+            <button class="hot-question" type="button" data-question="校园卡丢了怎么补办？"><strong>校园卡怎么补办？</strong><span>办事指南</span></button>
+            <button class="hot-question" type="button" data-question="这学期什么时候放假？"><strong>这学期什么时候放假？</strong><span>近期高频 · 校历</span></button>
+            <button class="hot-question" type="button" data-question="新生宿舍入住要准备什么？"><strong>宿舍入住要准备什么？</strong><span>开学季 · 校园生活</span></button>
+          </div>
+        </section>
+
+        <section class="conversation" id="conversation" aria-label="示例问答">
+          <div class="user-message" id="questionText">丽湖校区图书馆几点关门？</div>
+          <article class="answer-card">
+            <header class="answer-head">
+              <span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="#e95f68"/><circle cx="30" cy="31" r="16" fill="#fff0c7"/><circle cx="25" cy="29" r="2" fill="#4a3540"/><circle cx="35" cy="29" r="2" fill="#4a3540"/><path d="M26 36q4 3 8 0" fill="none" stroke="#4a3540" stroke-width="2" stroke-linecap="round"/></svg></span>
+              <div><div class="answer-name">Liko</div><div class="answer-note" id="answerNote">已核对校园资料</div></div>
+            </header>
+            <div class="answer-body" id="answerBody">
+              <p><strong>开放时间可能会随教学周和节假日调整。</strong>出发前可以先查看图书馆官网当天的开放安排，临时调整以馆方通知为准。</p>
+              <ul class="answer-list">
+                <li><span>1</span><div>先确认你要去的是丽湖校区图书馆，以及具体楼层或功能区。</div></li>
+                <li><span>2</span><div>节假日、考试周的开放时间可能不同，建议当天再核对一次。</div></li>
+              </ul>
+              <p>告诉我<strong>日期和想去的区域</strong>，接入知识库后我可以继续帮你查得更具体。</p>
+            </div>
+            <footer class="sources" aria-label="回答来源">
+              <div class="sources-title"><span>参考来源</span><span>2 条</span></div>
+              <a class="source-link demo-link" href="#"><span class="source-copy"><strong>深圳大学图书馆 · 开放时间</strong><span>lib.szu.edu.cn · 更新于 2026-08-10</span></span><span class="source-arrow">›</span></a>
+              <a class="source-link demo-link" href="#"><span class="source-copy"><strong>深圳大学 · 通知公告</strong><span>szu.edu.cn · 更新于 2026-08-08</span></span><span class="source-arrow">›</span></a>
+            </footer>
+            <div class="answer-meta">
+              <span class="answer-time">刚刚 · 内容为 UI 演示</span>
+              <div class="answer-actions" aria-label="回答反馈">
+                <button class="answer-action" type="button" id="copyAnswer" aria-label="复制回答"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+                <button class="answer-action feedback-up" type="button" aria-label="回答有帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v10H4V10h3ZM7 18h10.3a2 2 0 0 0 2-1.7l.7-5A2 2 0 0 0 18 9h-4l1-3.5A2 2 0 0 0 13.1 3L8 10v8"/></svg></button>
+                <button class="answer-action feedback-down" type="button" aria-label="回答需要改进"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 14V4H4v10h3ZM7 6h10.3a2 2 0 0 1 2 1.7l.7 5A2 2 0 0 1 18 15h-4l1 3.5a2 2 0 0 1-1.9 2.5L8 14V6"/></svg></button>
+              </div>
+            </div>
+            <div class="feedback-note" id="feedbackNote">反馈会用于核查来源和改进回答，不会立即自动修改事实。</div>
+          </article>
+        </section>
+      </div>
+    </section>
+
+    <section class="page" id="minePage" data-page="mine" aria-labelledby="mineTitle">
+      <header class="topbar"><div class="brand"><span class="brand-fruit" aria-hidden="true"></span><span>Liko</span></div></header>
+      <h1 class="page-title" id="mineTitle">我的</h1>
+      <section class="mine-card" aria-label="我的 Liko 身份卡">
+        <div class="mine-top">
+          <svg class="mine-portrait" viewBox="0 0 60 60" role="img" aria-label="我的 Liko"><circle cx="30" cy="31" r="25" fill="#e95f68"/><circle cx="30" cy="31" r="17" fill="#fff0c7"/><circle cx="24" cy="29" r="2.2" fill="#4a3540"/><circle cx="36" cy="29" r="2.2" fill="#4a3540"/><path d="M25 37q5 4 10 0" fill="none" stroke="#4a3540" stroke-width="2.3" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
+          <div><div class="mine-name">Liko</div><span class="serial-pill">No. 000128</span><div class="mine-desc">只属于你的校园伴生助手<br/>现在 12 天大</div></div>
+        </div>
+        <div class="color-row" aria-label="当前配色">
+          <div class="color-item"><span class="color-dot shell"></span><span class="color-copy"><span>外壳</span><strong>荔枝红</strong></span></div>
+          <div class="color-item"><span class="color-dot skin"></span><span class="color-copy"><span>肤色</span><strong>奶油色</strong></span></div>
+        </div>
+      </section>
+      <div class="settings-label">常用</div>
+      <section class="settings-card">
+        <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/></svg></span>个人资料</span><span class="setting-side">未完善 ›</span></button>
+        <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side">›</span></button>
+        <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 2.7 7.7 7 10 4.3-2.3 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>偏好与隐私</span><span class="setting-side">›</span></button>
+      </section>
+      <div class="settings-label">更多</div>
+      <section class="settings-card"><button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon">i</span>关于 Liko</span><span class="setting-side">v0.2 ›</span></button></section>
+    </section>
+
+    <div class="composer-dock is-hidden" id="composerDock">
+      <form class="composer" id="questionForm">
+        <label class="visually-hidden" for="questionInput">输入校园问题</label>
+        <input id="questionInput" type="text" maxlength="120" autocomplete="off" placeholder="问问校历、办事、宿舍…" />
+        <button class="send-button" type="submit" aria-label="发送问题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14-7-4 14-3-6-7-1Z"/><path d="m12 13 7-8"/></svg></button>
+      </form>
+    </div>
+
+    <nav class="bottom-nav" aria-label="主导航">
+      <button class="nav-button is-active" type="button" data-target="liko" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><path d="M9 11h.01M15 11h.01M9.5 15q2.5 2 5 0M14 4q1.5-2.5 4-2M16 5q3-2 5 0-2 3-5 0"/></svg><span>Liko</span></button>
+      <button class="nav-button" type="button" data-target="mine"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-4.2 3-6.3 7-6.3s6.3 2.1 7 6.3"/></svg><span>我的</span></button>
+    </nav>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="feedback-sheet" id="feedbackSheet" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle">
+    <div class="feedback-panel">
+      <h2 id="feedbackTitle">这条回答哪里需要改进？</h2>
+      <p>选择原因后，我们会优先核查资料和回答方式。</p>
+      <div class="reason-grid">
+        <button class="reason-button" type="button">不准确</button><button class="reason-button" type="button">已过期</button><button class="reason-button" type="button">没回答问题</button><button class="reason-button" type="button">表达不清</button><button class="reason-button" type="button">来源有问题</button>
+      </div>
+      <button class="sheet-close" type="button" id="closeFeedback">暂不选择</button>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const body = document.body;
+      const pages = [...document.querySelectorAll('.page')];
+      const navButtons = [...document.querySelectorAll('.nav-button')];
+      const composerDock = document.getElementById('composerDock');
+      const liko = document.getElementById('companionLiko');
+      const toast = document.getElementById('toast');
+      const feedbackSheet = document.getElementById('feedbackSheet');
+      let currentPage = 'liko';
+      let toastTimer;
+      let stateTimer;
+
+      const stateCopy = {
+        idle: { title:'我在这儿，随时都可以叫我。', detail:'轻轻呼吸，等你一起逛校园。', profile:'安静待机', aria:'Liko 的待机状态' },
+        study: { title:'今天也学到了一点新东西。', detail:'翻翻书，顺便替你记住重要日期。', profile:'认真学习', aria:'Liko 的学习状态' },
+        music: { title:'这一首很适合傍晚的校园。', detail:'戴好耳机，跟着节奏轻轻摇。', profile:'循环听歌', aria:'Liko 的听歌状态' },
+        fitness: { title:'动一动，脑袋也会更清醒。', detail:'今天做一点轻量训练，不逞强。', profile:'轻量健身', aria:'Liko 的健身状态' },
+        gaming: { title:'这一局结束就来陪你。', detail:'手柄握稳，认真但不着急。', profile:'打一局游戏', aria:'Liko 的游戏状态' }
+      };
+
+      const LIKO_STATES = Object.keys(stateCopy);
+      const STATE_INTERVAL = 60 * 60 * 1000;
+      const STATE_STORAGE_KEY = 'liko-hourly-state-v1';
+
+      const shuffledStates = (previousState = '') => {
+        const states = [...LIKO_STATES];
+        for (let index = states.length - 1; index > 0; index -= 1) {
+          const randomIndex = Math.floor(Math.random() * (index + 1));
+          [states[index], states[randomIndex]] = [states[randomIndex], states[index]];
+        }
+        if (states[0] === previousState) [states[0], states[1]] = [states[1], states[0]];
+        return states;
+      };
+
+      const createStateSchedule = (now = Date.now(), previousState = '') => {
+        const remaining = shuffledStates(previousState);
+        return { current: remaining.shift(), remaining, changedAt: now };
+      };
+
+      const isValidSchedule = (value) => {
+        if (!value || !LIKO_STATES.includes(value.current) || !Array.isArray(value.remaining) || !Number.isFinite(value.changedAt)) return false;
+        const uniqueRemaining = new Set(value.remaining);
+        return uniqueRemaining.size === value.remaining.length && value.remaining.every(state => LIKO_STATES.includes(state)) && !uniqueRemaining.has(value.current);
+      };
+
+      const readStateSchedule = () => {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STATE_STORAGE_KEY));
+          return isValidSchedule(saved) ? saved : null;
+        } catch (error) {
+          return null;
+        }
+      };
+
+      const saveStateSchedule = (schedule) => {
+        try { localStorage.setItem(STATE_STORAGE_KEY, JSON.stringify(schedule)); } catch (error) { /* 无痕模式下仅保留本次会话 */ }
+      };
+
+      const applyLikoState = (state) => {
+        const copy = stateCopy[state];
+        liko.dataset.state = state;
+        liko.setAttribute('aria-label', copy.aria);
+        document.getElementById('likoTitle').textContent = `${copy.aria}动画`;
+        document.getElementById('stateMessage').textContent = copy.title;
+        document.getElementById('stateDetail').textContent = copy.detail;
+        document.getElementById('profileState').textContent = copy.profile;
+      };
+
+      const moveScheduleForward = (schedule, now = Date.now()) => {
+        if (now < schedule.changedAt) schedule.changedAt = now;
+        let hoursPassed = Math.floor((now - schedule.changedAt) / STATE_INTERVAL);
+        while (hoursPassed > 0) {
+          if (!schedule.remaining.length) schedule.remaining = shuffledStates(schedule.current);
+          schedule.current = schedule.remaining.shift();
+          schedule.changedAt += STATE_INTERVAL;
+          hoursPassed -= 1;
+        }
+        return schedule;
+      };
+
+      const refreshHourlyState = () => {
+        const now = Date.now();
+        const schedule = moveScheduleForward(readStateSchedule() || createStateSchedule(now), now);
+        saveStateSchedule(schedule);
+        applyLikoState(schedule.current);
+        clearTimeout(stateTimer);
+        const nextChangeIn = Math.max(1000, schedule.changedAt + STATE_INTERVAL - Date.now() + 50);
+        stateTimer = setTimeout(refreshHourlyState, nextChangeIn);
+      };
+
+      const showToast = (message) => {
+        toast.textContent = message;
+        toast.classList.add('is-visible');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('is-visible'), 1800);
+      };
+
+      const setChatMode = (active) => {
+        const update = () => {
+          body.classList.toggle('chat-mode', active);
+          composerDock.classList.toggle('is-hidden', !active || currentPage !== 'liko');
+          window.scrollTo({top:0, behavior:'auto'});
+        };
+        if (document.startViewTransition && !matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(update);
+        else update();
+      };
+
+      const switchPage = (target) => {
+        currentPage = target;
+        pages.forEach(page => page.classList.toggle('is-active', page.dataset.page === target));
+        navButtons.forEach(button => {
+          const active = button.dataset.target === target;
+          button.classList.toggle('is-active', active);
+          active ? button.setAttribute('aria-current','page') : button.removeAttribute('aria-current');
+        });
+        composerDock.classList.toggle('is-hidden', target !== 'liko' || !body.classList.contains('chat-mode'));
+        window.scrollTo({top:0});
+      };
+
+      navButtons.forEach(button => button.addEventListener('click', () => switchPage(button.dataset.target)));
+      document.getElementById('enterChat').addEventListener('click', () => setChatMode(true));
+      document.getElementById('backToLiko').addEventListener('click', () => setChatMode(false));
+
+      refreshHourlyState();
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshHourlyState(); });
+      window.addEventListener('storage', event => { if (event.key === STATE_STORAGE_KEY) refreshHourlyState(); });
+
+      const useQuestion = (question) => {
+        document.getElementById('questionText').textContent = question;
+        document.getElementById('questionInput').value = '';
+        document.getElementById('answerNote').textContent = '整理校园资料中…';
+        setTimeout(() => document.getElementById('answerNote').textContent = '已核对校园资料', 650);
+        document.getElementById('conversation').scrollIntoView({behavior:'smooth',block:'start'});
+      };
+
+      document.querySelectorAll('.hot-question').forEach(button => button.addEventListener('click', () => useQuestion(button.dataset.question)));
+      document.getElementById('questionForm').addEventListener('submit', event => {
+        event.preventDefault();
+        const input = document.getElementById('questionInput');
+        const question = input.value.trim();
+        if (!question) { showToast('先写下你想问的问题'); input.focus(); return; }
+        useQuestion(question);
+        showToast('当前是 UI 演示，稍后接入真实知识库');
+      });
+
+      document.querySelectorAll('.demo-link').forEach(link => link.addEventListener('click', event => { event.preventDefault(); showToast('接入知识库后会打开官方原文'); }));
+      document.getElementById('copyAnswer').addEventListener('click', async () => {
+        try { await navigator.clipboard.writeText(document.getElementById('answerBody').innerText.trim()); showToast('回答已复制'); }
+        catch { showToast('当前浏览器暂不支持复制'); }
+      });
+
+      document.querySelector('.feedback-up').addEventListener('click', event => {
+        const active = event.currentTarget.classList.toggle('is-selected');
+        document.querySelector('.feedback-down').classList.remove('is-selected');
+        document.getElementById('feedbackNote').classList.toggle('is-visible', active);
+        showToast(active ? '谢谢，你的反馈会帮助改进回答' : '已撤销反馈');
+      });
+
+      document.querySelector('.feedback-down').addEventListener('click', event => {
+        event.currentTarget.classList.add('is-selected');
+        document.querySelector('.feedback-up').classList.remove('is-selected');
+        feedbackSheet.classList.add('is-open');
+      });
+
+      const closeFeedback = () => feedbackSheet.classList.remove('is-open');
+      document.getElementById('closeFeedback').addEventListener('click', closeFeedback);
+      feedbackSheet.addEventListener('click', event => { if (event.target === feedbackSheet) closeFeedback(); });
+      document.querySelectorAll('.reason-button').forEach(button => button.addEventListener('click', () => {
+        closeFeedback();
+        document.getElementById('feedbackNote').classList.add('is-visible');
+        showToast(`已记录：${button.textContent}`);
+      }));
+      document.querySelectorAll('.shell-action').forEach(button => button.addEventListener('click', () => showToast('功能入口已预留')));
+    })();
+  </script>
+</body>
+</html>

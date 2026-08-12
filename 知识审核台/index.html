@@ -1,0 +1,1577 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src 'unsafe-inline' blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Liko Rag Review Console</title>
+<style>:root{color-scheme:light dark;background:light-dark(rgb(255 255 255), rgb(24 24 24))}html,body{margin:0}body{box-sizing:border-box;padding:1rem;background:inherit}iframe{display:block;width:100%;height:calc(100vh - 2rem);margin:0 auto;border:0}</style>
+</head>
+<body>
+<iframe sandbox="allow-scripts" referrerpolicy="no-referrer" title="Liko Rag Review Console" srcdoc="&lt;!doctype html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1&quot;&gt;
+&lt;meta name=&quot;referrer&quot; content=&quot;no-referrer&quot;&gt;
+&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; script-src &#x27;unsafe-inline&#x27; &#x27;unsafe-eval&#x27; &#x27;wasm-unsafe-eval&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; style-src &#x27;unsafe-inline&#x27; blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; img-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; font-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; media-src blob: data: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://esm.sh https://fonts.bunny.net https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com; worker-src blob:; connect-src blob: data:; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;&quot;&gt;
+&lt;title&gt;Liko Rag Review Console&lt;/title&gt;
+&lt;style&gt;:root {
+  color-scheme: light dark;
+  background-color: var(
+    --background,
+    var(--color-background-primary, light-dark(rgb(255 255 255), rgb(24 24 24)))
+  ) !important;
+
+  /* Agent-facing contract; keep in sync with SKILL.md. */
+  --background: var(
+    --color-background-primary,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --card: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  --card-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --popover: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255), rgb(45 45 45))
+  );
+  --popover-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --primary: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --primary-foreground: var(
+    --color-text-inverse,
+    light-dark(rgb(255 255 255), rgb(13 13 13))
+  );
+  --secondary: var(
+    --color-background-secondary,
+    light-dark(rgb(255 255 255 / 96%), rgb(54 54 54 / 96%))
+  );
+  --secondary-foreground: var(
+    --color-text-primary,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --muted: color-mix(in srgb, var(--foreground) 10%, transparent);
+  --muted-foreground: var(
+    --color-text-secondary,
+    light-dark(rgb(26 28 31 / 49.4%), rgb(255 255 255 / 49.8%))
+  );
+  --accent: var(
+    --color-background-info,
+    light-dark(rgb(229 242 255), rgb(13 39 63))
+  );
+  --accent-foreground: var(
+    --color-text-info,
+    light-dark(rgb(51 156 255), rgb(131 195 255))
+  );
+  --destructive: var(
+    --color-text-warning,
+    light-dark(rgb(226 85 7), rgb(255 133 73))
+  );
+  --border: var(
+    --color-border-secondary,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+  --input: var(
+    --color-border-primary,
+    light-dark(
+      rgb(26 28 31 / 11.8%),
+      color-mix(in oklab, rgb(0 0 0) 10%, transparent)
+    )
+  );
+  --ring: var(
+    --color-ring-primary,
+    light-dark(rgb(51 156 255), rgb(131 195 255 / 76%))
+  );
+  --font-size-base: var(--font-text-md-size, 14px);
+  --blue: light-dark(rgb(51 156 255), rgb(51 156 255));
+  --orange: light-dark(rgb(226 85 7), rgb(251 106 34));
+  --green: light-dark(rgb(0 162 64), rgb(64 201 119));
+  --red: light-dark(rgb(224 46 42), rgb(255 103 100));
+  --purple: light-dark(rgb(146 79 247), rgb(173 123 249));
+  --yellow: light-dark(rgb(255 195 0), rgb(255 210 64));
+  --viz-series-1: var(--primary);
+  --viz-series-2: light-dark(rgb(243 136 59), rgb(245 154 86));
+  --viz-series-3: light-dark(rgb(93 201 119), rgb(116 213 139));
+  --viz-series-4: light-dark(rgb(235 119 177), rgb(240 143 192));
+  --viz-series-5: light-dark(rgb(155 121 236), rgb(170 145 239));
+  --viz-series-6: light-dark(rgb(58 185 177), rgb(90 203 194));
+
+  /* Internal implementation variables; not part of the agent contract. */
+  --font-sans: -apple-system, system-ui, &quot;Segoe UI&quot;, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, &quot;SF Mono&quot;, Menlo, Consolas, &quot;Liberation Mono&quot;,
+    monospace;
+  --font-size-normal: max(11px, var(--font-size-base));
+  --font-size-tooltip: calc(var(--font-size-base) - 1px);
+  --font-size-small: max(11px, calc(var(--font-size-base) - 2px));
+  --font-size-h1: calc(var(--font-size-normal) * 1.7142857143);
+  --font-size-h2: calc(var(--font-size-normal) * 1.4285714286);
+  --font-size-h3: calc(var(--font-size-normal) * 1.2857142857);
+  --font-weight-normal: 430;
+  --font-weight-medium: 500;
+  --line-height-normal: calc(var(--font-size-normal) * 1.5);
+  --line-height-tooltip: calc(var(--font-size-tooltip) * 1.4285714286);
+  --line-height-small: calc(var(--font-size-small) + 4px);
+  --radius: var(--border-radius-lg, 12.5px);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-full: 9999px;
+  --shadow-sm: 0 1px 2px -1px rgb(0 0 0 / 8%);
+  --checkmark-image: url(&quot;data:image/svg+xml,%3Csvg xmlns=&#x27;http://www.w3.org/2000/svg&#x27; viewBox=&#x27;0 0 17 17&#x27;%3E%3Cpath d=&#x27;M12.8961 3.64101C13.1297 3.41418 13.4984 3.37523 13.7779 3.56581C14.0571 3.75635 14.1554 4.11331 14.0299 4.41347L13.9615 4.53847L7.71151 13.7045C7.59411 13.8767 7.4063 13.9877 7.19881 14.0072C6.99136 14.0267 6.78564 13.9533 6.63826 13.806L2.88826 10.056L2.79842 9.9457C2.6192 9.67407 2.64927 9.30496 2.88826 9.06581C3.12738 8.82669 3.49647 8.79676 3.76815 8.97597L3.8785 9.06581L7.03084 12.2182L12.8053 3.74941L12.8961 3.64101Z&#x27;/%3E%3C/svg%3E&quot;);
+
+  /* Legacy aliases; not part of the current agent contract. */
+  --viz-bg: transparent;
+  --viz-panel: var(--card);
+  --viz-border: var(--border);
+  --viz-text: var(--foreground);
+  --viz-muted: var(--muted-foreground);
+  --viz-accent: var(--primary);
+  --viz-accent-text: var(--primary-foreground);
+  --viz-accent-bg: var(--accent);
+  --viz-font-size: var(--font-size-base);
+  --viz-warning: var(--destructive);
+}
+
+:root[data-theme=&quot;light&quot;] {
+  color-scheme: light;
+}
+
+:root[data-theme=&quot;dark&quot;] {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html &gt; body {
+  /* Preserve MCP aliases for older inline renderers without creating :root cycles. */
+  --color-background-primary: var(
+    --background,
+    light-dark(rgb(255 255 255), rgb(24 24 24))
+  );
+  --color-text-primary: var(
+    --foreground,
+    light-dark(rgb(26 28 31), rgb(255 255 255))
+  );
+  --color-border-secondary: var(
+    --border,
+    light-dark(rgb(26 28 31 / 8%), rgb(255 255 255 / 8.2%))
+  );
+
+  margin: 0;
+  padding: 5px;
+  color: var(--foreground);
+  background: transparent !important;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-normal);
+  font-weight: var(--font-weight-normal);
+  line-height: var(--line-height-normal);
+}
+
+a {
+  color: color-mix(in srgb, var(--viz-accent) 80%, var(--viz-text) 20%);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium, 500);
+  text-decoration: none;
+  text-underline-offset: 2px;
+}
+
+a:is(:hover, :focus-visible) {
+  text-decoration-line: underline;
+  text-decoration-style: dashed;
+  text-decoration-thickness: 0.5px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin-block: 0;
+}
+
+h1 {
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h2 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.3;
+}
+
+b,
+strong,
+th {
+  font-weight: var(--font-weight-medium);
+}
+
+code:not(pre code) {
+  display: inline;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  word-break: break-word;
+}
+
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--foreground);
+  font: inherit;
+  text-align: start;
+}
+
+.table :is(th, td) {
+  padding-block: 10px;
+  padding-inline: 0 24px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.table-responsive &gt; .table :is(th, td) {
+  overflow-wrap: break-word;
+}
+
+.table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.table :is(caption, thead th) {
+  font-weight: 600;
+}
+
+.table thead th {
+  padding-block: 8px;
+  border-bottom-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+}
+
+.table tbody tr:last-child :is(th, td) {
+  border-bottom: 0;
+}
+
+.table.table-sm :is(th, td) {
+  padding-block: 6px;
+}
+
+.table.table-sm :is(th, td):not(:last-child) {
+  padding-inline-end: 16px;
+}
+
+.table :is(.text-end, [align=&quot;right&quot;]) {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.table :is(.text-center, [align=&quot;center&quot;]) {
+  text-align: center;
+}
+
+.table .text-nowrap {
+  white-space: nowrap;
+}
+
+#widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  padding: 0;
+  background: transparent !important;
+}
+
+.card {
+  min-width: 0;
+  padding: 12px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  border-radius: var(--radius-2xl);
+  corner-shape: superellipse(1.5);
+  color: var(--card-foreground);
+  background: var(--card);
+}
+
+#widget &gt; :not(.card) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: min(
+    20rem,
+    var(--tooltip-available-width, calc(100vw - 10px)),
+    calc(100vw - 10px)
+  );
+  max-height: min(
+    var(--tooltip-available-height, calc(100vh - 10px)),
+    calc(100vh - 10px)
+  );
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--popover-foreground);
+  background: var(--popover);
+  box-shadow: none;
+  font-size: var(--font-size-tooltip);
+  line-height: var(--line-height-tooltip);
+  overflow-wrap: break-word;
+  white-space: normal;
+  pointer-events: none;
+  user-select: none;
+}
+
+.viz-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(180px, 24%), 1fr));
+  gap: 10px;
+}
+
+.viz-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.viz-stat-value {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.25;
+}
+
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.viz-badge {
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  color: var(--accent-foreground);
+  background: var(--accent);
+  font-weight: var(--font-weight-medium);
+}
+
+small,
+.text-small,
+.viz-badge {
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-small);
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.viz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.viz-controls &gt; .form-label {
+  display: grid;
+  min-width: min(100%, 260px);
+  flex: 1 1 280px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 2px 12px;
+  margin-bottom: 0;
+}
+
+.viz-controls &gt; .form-label &gt; :is(.form-control, .form-range, .form-select) {
+  grid-column: 1 / -1;
+}
+
+.btn,
+.form-check-input,
+.form-control,
+.form-range,
+.form-select {
+  font: inherit;
+}
+
+.btn {
+  appearance: button;
+  display: inline-flex;
+  inline-size: fit-content;
+  max-inline-size: 100%;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 8px;
+  -webkit-app-region: no-drag;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: var(--cursor-interaction, pointer);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.btn:is(.btn-block, .viz-tile) {
+  inline-size: 100%;
+}
+
+.btn.viz-tile {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+a.btn {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn-primary {
+  border-color: transparent;
+  color: var(--primary-foreground);
+  background: var(--foreground);
+  background-clip: padding-box;
+}
+
+.btn-primary .text-muted {
+  color: color-mix(in srgb, var(--primary-foreground) 50%, transparent);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in srgb, var(--foreground) 80%, transparent);
+  background-clip: padding-box;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--muted-foreground);
+  background: transparent;
+}
+
+.btn-ghost:not(:disabled):hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+[data-lucide] {
+  stroke-width: 1.6;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--foreground);
+}
+
+.form-control {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background: var(--secondary);
+}
+
+.form-control::placeholder {
+  color: var(--muted-foreground);
+}
+
+.form-control[type=&quot;file&quot;] {
+  padding: 0;
+  overflow: hidden;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control[type=&quot;file&quot;]::file-selector-button {
+  min-height: 26px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-right: 1px solid var(--input);
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  cursor: inherit;
+  font: inherit;
+}
+
+.form-control[type=&quot;file&quot;]:not(:disabled):hover::file-selector-button {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-control-color[type=&quot;color&quot;] {
+  width: 40px;
+  height: 28px;
+  padding: 3px;
+  cursor: var(--cursor-interaction, pointer);
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.form-control-color[type=&quot;color&quot;]::-webkit-color-swatch {
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 4px);
+  corner-shape: superellipse(1.5);
+}
+
+textarea.form-control {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.form-control:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-control:disabled,
+.form-select:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.form-select {
+  appearance: none;
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 32px 0 8px;
+  outline: none;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-lg);
+  corner-shape: superellipse(1.5);
+  color: var(--foreground);
+  background-color: var(--secondary);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position:
+    calc(100% - 14px) 50%,
+    calc(100% - 10px) 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-select:not(:disabled):hover {
+  background-color: color-mix(in srgb, var(--foreground) 6%, var(--secondary));
+}
+
+.form-select:focus-visible {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-check {
+  display: flex;
+  min-height: 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-check-input {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  margin: 0;
+  border: 1px solid var(--input);
+  color: var(--primary-foreground);
+  background-color: transparent;
+  cursor: var(--cursor-interaction, default);
+  transition:
+    background-color 150ms,
+    border-color 150ms,
+    box-shadow 150ms;
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;] {
+  border-color: var(--input);
+  border-radius: var(--radius-sm);
+  corner-shape: superellipse(1.5);
+  background-color: var(--secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input:not(:disabled):not(:checked):hover {
+  background-color: var(--card);
+}
+
+.form-check:not(.form-switch) .form-check-input[type=&quot;checkbox&quot;]:checked {
+  border-color: var(--primary);
+  background-color: var(--primary);
+}
+
+.form-check:not(.form-switch)
+  .form-check-input[type=&quot;checkbox&quot;]:checked::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-foreground);
+  content: &quot;&quot;;
+  mask: var(--checkmark-image) center / 12px 12px no-repeat;
+}
+
+.form-check-input[type=&quot;radio&quot;] {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+}
+
+.form-check-input[type=&quot;radio&quot;]:checked {
+  border: 2px solid var(--primary);
+  background:
+    radial-gradient(circle, var(--primary-foreground) 0 2.5px, transparent 3px),
+    var(--primary);
+}
+
+.form-check:not(.form-switch) .form-check-input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.form-check:not(.form-switch) .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+}
+
+.form-switch .form-check-input:disabled,
+.form-switch .form-check-input:disabled + .form-check-label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-check-label {
+  color: var(--foreground);
+  cursor: var(--cursor-interaction, default);
+}
+
+.form-switch .form-check-input {
+  position: relative;
+  width: 32px;
+  height: 20px;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--muted);
+  box-shadow: none;
+  transition: background-color 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  border: 1px solid light-dark(var(--primary-foreground), var(--foreground));
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+  box-shadow: var(--shadow-sm);
+  content: &quot;&quot;;
+  transform: translate(2px, -50%);
+  transition: transform 200ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.form-switch .form-check-input:checked {
+  background: var(--primary);
+}
+
+.form-switch .form-check-input:checked::before {
+  transform: translate(14px, -50%);
+}
+
+.form-switch .form-check-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.form-range {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 28px;
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  outline: none;
+  border: 0;
+  accent-color: var(--primary);
+  background: linear-gradient(
+      color-mix(in srgb, var(--foreground) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 7%, transparent)
+    )
+    center / 100% 2px no-repeat;
+}
+
+.form-range::-webkit-slider-runnable-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-webkit-slider-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range::-moz-range-track {
+  height: 28px;
+  background: transparent;
+}
+
+.form-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: light-dark(var(--primary-foreground), var(--foreground));
+}
+
+.form-range:focus-visible::-moz-range-thumb {
+  border-color: var(--ring);
+  box-shadow: inset 0 0 0 1px var(--ring);
+}
+
+.form-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.btn:not(.btn-primary, .viz-tile):is(
+    [aria-pressed=&quot;true&quot;],
+    [aria-selected=&quot;true&quot;],
+    .is-selected
+  ) {
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.btn.viz-tile:is([aria-pressed=&quot;true&quot;], [aria-selected=&quot;true&quot;], .is-selected) {
+  border-color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+#widget &gt; svg {
+  width: 100%;
+}
+
+/* Model-authored chart rules can otherwise stretch icons after these styles load. */
+svg.lucide {
+  display: block;
+  width: 16px !important;
+  height: 16px !important;
+  flex: none;
+  margin: 0 !important;
+  stroke-width: 1.6;
+}
+
+.text-warning,
+.text-destructive {
+  color: var(--destructive);
+}
+
+html&gt;body{padding:0}&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;div id=&quot;liko-review-demo&quot;&gt;
+  &lt;style&gt;
+    #liko-review-demo {
+      color-scheme: light dark;
+      --liko-canvas: light-dark(#f7f4ee, #171411);
+      --liko-panel: light-dark(#fffdf9, #211d19);
+      --liko-panel-soft: light-dark(#f3eee6, #2a241f);
+      --liko-text: light-dark(#2b2520, #f4eee6);
+      --liko-muted: light-dark(#766d65, #bcb1a7);
+      --liko-line: light-dark(#e5ddd2, #40372f);
+      --liko-red: light-dark(#b9364c, #ee7184);
+      --liko-red-soft: light-dark(#fbe7e9, #43242a);
+      --liko-green: light-dark(#287a5b, #6ad0a8);
+      --liko-green-soft: light-dark(#e4f3ec, #193b30);
+      --liko-amber: light-dark(#9a6721, #e6b765);
+      --liko-amber-soft: light-dark(#fbf0d9, #40331d);
+      --liko-shadow: light-dark(0 18px 48px rgba(69, 49, 35, .10), 0 18px 48px rgba(0, 0, 0, .24));
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif;
+      color: var(--liko-text);
+      background: transparent;
+      width: 100%;
+    }
+    #liko-review-demo * { box-sizing: border-box; }
+    #liko-review-demo button,
+    #liko-review-demo input { font: inherit; }
+    #liko-review-demo button { cursor: pointer; }
+    #liko-review-demo .lr-shell {
+      overflow: hidden;
+      background: var(--liko-canvas);
+      border: 1px solid var(--liko-line);
+      border-radius: 26px;
+      box-shadow: var(--liko-shadow);
+    }
+    #liko-review-demo .lr-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 18px 22px;
+      background: var(--liko-panel);
+      border-bottom: 1px solid var(--liko-line);
+    }
+    #liko-review-demo .lr-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    #liko-review-demo .lr-fruit {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border-radius: 14px 14px 18px 18px;
+      background: var(--liko-red);
+      color: white;
+      font-weight: 500;
+    }
+    #liko-review-demo .lr-title { font-weight: 500; }
+    #liko-review-demo .lr-subtitle { color: var(--liko-muted); margin-top: 2px; }
+    #liko-review-demo .lr-sync {
+      border: 1px solid var(--liko-line);
+      background: var(--liko-panel-soft);
+      color: var(--liko-text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+    #liko-review-demo .lr-tabs {
+      display: flex;
+      gap: 4px;
+      padding: 10px 16px 0;
+      background: var(--liko-panel);
+      overflow-x: auto;
+    }
+    #liko-review-demo .lr-tab {
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: var(--liko-muted);
+      padding: 10px 12px;
+      white-space: nowrap;
+    }
+    #liko-review-demo .lr-tab[aria-selected=&quot;true&quot;] { color: var(--liko-red); border-bottom-color: var(--liko-red); }
+    #liko-review-demo .lr-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 16px;
+    }
+    #liko-review-demo .lr-stat {
+      padding: 14px;
+      background: var(--liko-panel);
+      border: 1px solid var(--liko-line);
+      border-radius: 16px;
+    }
+    #liko-review-demo .lr-stat-label { color: var(--liko-muted); }
+    #liko-review-demo .lr-stat-value { margin-top: 5px; font-size: 1.45em; font-weight: 500; }
+    #liko-review-demo .lr-main {
+      display: grid;
+      grid-template-columns: minmax(250px, .85fr) minmax(330px, 1.45fr);
+      gap: 14px;
+      padding: 0 16px 16px;
+    }
+    #liko-review-demo .lr-pane {
+      min-width: 0;
+      background: var(--liko-panel);
+      border: 1px solid var(--liko-line);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    #liko-review-demo .lr-pane-head { padding: 15px; border-bottom: 1px solid var(--liko-line); }
+    #liko-review-demo .lr-pane-title { font-weight: 500; }
+    #liko-review-demo .lr-search {
+      width: 100%;
+      margin-top: 11px;
+      padding: 10px 12px;
+      border: 1px solid var(--liko-line);
+      border-radius: 12px;
+      background: var(--liko-canvas);
+      color: var(--liko-text);
+      font-size: 16px;
+    }
+    #liko-review-demo .lr-filters { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
+    #liko-review-demo .lr-filter {
+      border: 1px solid var(--liko-line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: transparent;
+      color: var(--liko-muted);
+    }
+    #liko-review-demo .lr-filter[aria-pressed=&quot;true&quot;] { background: var(--liko-red-soft); border-color: var(--liko-red); color: var(--liko-red); }
+    #liko-review-demo .lr-records { padding: 7px; }
+    #liko-review-demo .lr-record {
+      width: 100%;
+      display: block;
+      text-align: left;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 12px;
+      background: transparent;
+      color: var(--liko-text);
+    }
+    #liko-review-demo .lr-record + .lr-record { margin-top: 4px; }
+    #liko-review-demo .lr-record:hover { background: var(--liko-panel-soft); }
+    #liko-review-demo .lr-record[aria-current=&quot;true&quot;] { background: var(--liko-red-soft); border-color: var(--liko-red); }
+    #liko-review-demo .lr-record-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+    #liko-review-demo .lr-record-title { font-weight: 500; }
+    #liko-review-demo .lr-record-meta { margin-top: 6px; color: var(--liko-muted); }
+    #liko-review-demo .lr-status { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+    #liko-review-demo .lr-status::before { content: &quot;&quot;; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    #liko-review-demo .lr-status[data-state=&quot;pending&quot;] { color: var(--liko-amber); }
+    #liko-review-demo .lr-status[data-state=&quot;passed&quot;] { color: var(--liko-green); }
+    #liko-review-demo .lr-status[data-state=&quot;hold&quot;] { color: var(--liko-red); }
+    #liko-review-demo .lr-detail { padding: 18px; }
+    #liko-review-demo .lr-detail-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; }
+    #liko-review-demo .lr-detail h2 { margin: 0; font-size: 1.18em; font-weight: 500; }
+    #liko-review-demo .lr-source { margin-top: 7px; color: var(--liko-muted); word-break: break-word; }
+    #liko-review-demo .lr-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+    #liko-review-demo .lr-tag { padding: 5px 9px; background: var(--liko-panel-soft); border-radius: 999px; color: var(--liko-muted); }
+    #liko-review-demo .lr-alert { margin-top: 15px; padding: 12px; background: var(--liko-amber-soft); border-left: 3px solid var(--liko-amber); }
+    #liko-review-demo .lr-section { margin-top: 18px; }
+    #liko-review-demo .lr-section-title { font-weight: 500; margin-bottom: 8px; }
+    #liko-review-demo .lr-excerpt { padding: 14px; background: var(--liko-panel-soft); border-radius: 14px; line-height: 1.75; }
+    #liko-review-demo .lr-question-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    #liko-review-demo .lr-question {
+      border: 1px solid var(--liko-line);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--liko-text);
+      padding: 8px 10px;
+    }
+    #liko-review-demo .lr-question[aria-pressed=&quot;true&quot;] { border-color: var(--liko-green); background: var(--liko-green-soft); color: var(--liko-green); }
+    #liko-review-demo .lr-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--liko-line); }
+    #liko-review-demo .lr-action {
+      border: 1px solid var(--liko-line);
+      border-radius: 11px;
+      padding: 9px 12px;
+      background: transparent;
+      color: var(--liko-text);
+    }
+    #liko-review-demo .lr-action-primary { background: var(--liko-red); border-color: var(--liko-red); color: white; }
+    #liko-review-demo .lr-action-good { border-color: var(--liko-green); color: var(--liko-green); }
+    #liko-review-demo .lr-preview { display: none; margin-top: 14px; padding: 14px; border: 1px solid var(--liko-green); background: var(--liko-green-soft); border-radius: 14px; }
+    #liko-review-demo .lr-preview[data-open=&quot;true&quot;] { display: block; }
+    #liko-review-demo .lr-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 18px; border-top: 1px solid var(--liko-line); background: var(--liko-panel); }
+    #liko-review-demo .lr-progress { color: var(--liko-muted); }
+    #liko-review-demo .lr-build {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: var(--liko-red);
+      color: white;
+      font-weight: 500;
+    }
+    #liko-review-demo .lr-empty { display: none; padding: 24px; color: var(--liko-muted); text-align: center; }
+    #liko-review-demo .lr-toast { min-height: 20px; color: var(--liko-green); margin-top: 10px; }
+    @media (max-width: 720px) {
+      #liko-review-demo .lr-topbar { align-items: flex-start; padding: 15px; }
+      #liko-review-demo .lr-sync { display: none; }
+      #liko-review-demo .lr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 12px; }
+      #liko-review-demo .lr-main { grid-template-columns: 1fr; padding: 0 12px 12px; }
+      #liko-review-demo .lr-footer { align-items: stretch; flex-direction: column; }
+      #liko-review-demo .lr-build { width: 100%; }
+    }
+  &lt;/style&gt;
+
+  &lt;section class=&quot;lr-shell&quot; aria-label=&quot;Liko 知识库审核台界面预览&quot;&gt;
+    &lt;header class=&quot;lr-topbar&quot;&gt;
+      &lt;div class=&quot;lr-brand&quot;&gt;
+        &lt;div class=&quot;lr-fruit&quot; aria-hidden=&quot;true&quot;&gt;L&lt;/div&gt;
+        &lt;div&gt;
+          &lt;div class=&quot;lr-title&quot;&gt;Liko 知识准备台&lt;/div&gt;
+          &lt;div class=&quot;lr-subtitle&quot; id=&quot;lr-view-subtitle&quot;&gt;资料审核 · 把原始网页变成可靠答案&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
+      &lt;button class=&quot;lr-sync&quot; type=&quot;button&quot; id=&quot;lr-sync&quot;&gt;同步采集状态&lt;/button&gt;
+    &lt;/header&gt;
+
+    &lt;nav class=&quot;lr-tabs&quot; aria-label=&quot;工作区&quot;&gt;
+      &lt;button class=&quot;lr-tab&quot; type=&quot;button&quot; data-view=&quot;总览&quot; aria-selected=&quot;false&quot;&gt;总览&lt;/button&gt;
+      &lt;button class=&quot;lr-tab&quot; type=&quot;button&quot; data-view=&quot;资料审核&quot; aria-selected=&quot;true&quot;&gt;资料审核&lt;/button&gt;
+      &lt;button class=&quot;lr-tab&quot; type=&quot;button&quot; data-view=&quot;问题库&quot; aria-selected=&quot;false&quot;&gt;问题库&lt;/button&gt;
+      &lt;button class=&quot;lr-tab&quot; type=&quot;button&quot; data-view=&quot;RAG 准入&quot; aria-selected=&quot;false&quot;&gt;RAG 准入&lt;/button&gt;
+    &lt;/nav&gt;
+
+    &lt;div class=&quot;lr-stats&quot; aria-label=&quot;当前项目数据&quot;&gt;
+      &lt;div class=&quot;lr-stat&quot;&gt;&lt;div class=&quot;lr-stat-label&quot;&gt;已采网页&lt;/div&gt;&lt;div class=&quot;lr-stat-value&quot;&gt;611&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;lr-stat&quot;&gt;&lt;div class=&quot;lr-stat-label&quot;&gt;待人工审核&lt;/div&gt;&lt;div class=&quot;lr-stat-value&quot; id=&quot;lr-pending-count&quot;&gt;3&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;lr-stat&quot;&gt;&lt;div class=&quot;lr-stat-label&quot;&gt;首批问题&lt;/div&gt;&lt;div class=&quot;lr-stat-value&quot;&gt;50&lt;/div&gt;&lt;/div&gt;
+      &lt;div class=&quot;lr-stat&quot;&gt;&lt;div class=&quot;lr-stat-label&quot;&gt;可进入 RAG&lt;/div&gt;&lt;div class=&quot;lr-stat-value&quot; id=&quot;lr-pass-count&quot;&gt;1&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+
+    &lt;div class=&quot;lr-main&quot;&gt;
+      &lt;section class=&quot;lr-pane&quot; aria-label=&quot;待审核资料&quot;&gt;
+        &lt;div class=&quot;lr-pane-head&quot;&gt;
+          &lt;div class=&quot;lr-pane-title&quot;&gt;审核队列 &lt;span class=&quot;lr-subtitle&quot; id=&quot;lr-visible-count&quot;&gt;4 条&lt;/span&gt;&lt;/div&gt;
+          &lt;input class=&quot;lr-search&quot; id=&quot;lr-search&quot; type=&quot;search&quot; placeholder=&quot;搜标题、部门或问题…&quot; aria-label=&quot;搜索审核资料&quot;&gt;
+          &lt;div class=&quot;lr-filters&quot; aria-label=&quot;状态筛选&quot;&gt;
+            &lt;button class=&quot;lr-filter&quot; type=&quot;button&quot; data-filter=&quot;all&quot; aria-pressed=&quot;true&quot;&gt;全部&lt;/button&gt;
+            &lt;button class=&quot;lr-filter&quot; type=&quot;button&quot; data-filter=&quot;pending&quot; aria-pressed=&quot;false&quot;&gt;待审核&lt;/button&gt;
+            &lt;button class=&quot;lr-filter&quot; type=&quot;button&quot; data-filter=&quot;hold&quot; aria-pressed=&quot;false&quot;&gt;需核验&lt;/button&gt;
+            &lt;button class=&quot;lr-filter&quot; type=&quot;button&quot; data-filter=&quot;passed&quot; aria-pressed=&quot;false&quot;&gt;已通过&lt;/button&gt;
+          &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div class=&quot;lr-records&quot; id=&quot;lr-records&quot;&gt;&lt;/div&gt;
+        &lt;div class=&quot;lr-empty&quot; id=&quot;lr-empty&quot;&gt;没有符合条件的资料&lt;/div&gt;
+      &lt;/section&gt;
+
+      &lt;section class=&quot;lr-pane&quot; aria-label=&quot;资料详情与审核操作&quot;&gt;
+        &lt;div class=&quot;lr-detail&quot;&gt;
+          &lt;div class=&quot;lr-detail-top&quot;&gt;
+            &lt;div&gt;
+              &lt;h2 id=&quot;lr-detail-title&quot;&gt;&lt;/h2&gt;
+              &lt;div class=&quot;lr-source&quot; id=&quot;lr-detail-source&quot;&gt;&lt;/div&gt;
+            &lt;/div&gt;
+            &lt;span class=&quot;lr-status&quot; id=&quot;lr-detail-status&quot;&gt;&lt;/span&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;lr-tags&quot; id=&quot;lr-tags&quot;&gt;&lt;/div&gt;
+          &lt;div class=&quot;lr-alert&quot; id=&quot;lr-alert&quot;&gt;&lt;/div&gt;
+
+          &lt;div class=&quot;lr-section&quot;&gt;
+            &lt;div class=&quot;lr-section-title&quot;&gt;正文摘录&lt;/div&gt;
+            &lt;div class=&quot;lr-excerpt&quot; id=&quot;lr-excerpt&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;lr-section&quot;&gt;
+            &lt;div class=&quot;lr-section-title&quot;&gt;关联到首批问题&lt;/div&gt;
+            &lt;div class=&quot;lr-question-list&quot; id=&quot;lr-questions&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+
+          &lt;div class=&quot;lr-actions&quot;&gt;
+            &lt;button class=&quot;lr-action lr-action-good&quot; type=&quot;button&quot; data-review=&quot;passed&quot;&gt;通过并准入&lt;/button&gt;
+            &lt;button class=&quot;lr-action&quot; type=&quot;button&quot; data-review=&quot;hold&quot;&gt;标记需核验&lt;/button&gt;
+            &lt;button class=&quot;lr-action&quot; type=&quot;button&quot; id=&quot;lr-preview-button&quot;&gt;生成答案预览&lt;/button&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;lr-preview&quot; id=&quot;lr-preview&quot;&gt;
+            &lt;div class=&quot;lr-section-title&quot;&gt;Liko 回答预览&lt;/div&gt;
+            &lt;div id=&quot;lr-preview-text&quot;&gt;&lt;/div&gt;
+          &lt;/div&gt;
+          &lt;div class=&quot;lr-toast&quot; id=&quot;lr-toast&quot; aria-live=&quot;polite&quot;&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/section&gt;
+    &lt;/div&gt;
+
+    &lt;footer class=&quot;lr-footer&quot;&gt;
+      &lt;div class=&quot;lr-progress&quot; id=&quot;lr-progress&quot;&gt;本轮已审核 1 / 4 条 · 所有操作可撤回&lt;/div&gt;
+      &lt;button class=&quot;lr-build&quot; type=&quot;button&quot; id=&quot;lr-build&quot;&gt;确认方案，开始开发审核台&lt;/button&gt;
+    &lt;/footer&gt;
+  &lt;/section&gt;
+
+  &lt;script&gt;
+    (() =&gt; {
+      const root = document.getElementById(&#x27;liko-review-demo&#x27;);
+      const data = [
+        {
+          id: &#x27;lib-policy&#x27;, state: &#x27;hold&#x27;, title: &#x27;图书馆逾期、损坏、遗失处理办法&#x27;,
+          source: &#x27;深圳大学图书馆 · 2014 年文件 · PDF 5 页&#x27;,
+          tags: [&#x27;图书馆&#x27;, &#x27;规章制度&#x27;, &#x27;时间敏感&#x27;],
+          alert: &#x27;文件内容完整，但发布时间较早。必须确认目前是否仍执行，才能进入 RAG。&#x27;,
+          excerpt: &#x27;借阅书刊应如期归还；逾期归还需缴纳逾期违约金。遗失书刊可选择自购同版本书刊或支付赔款。&#x27;,
+          questions: [&#x27;图书逾期怎么处理？&#x27;, &#x27;图书丢了怎么赔？&#x27;], linked: [true, true],
+          preview: &#x27;这份规定发布于 2014 年，目前仍需向图书馆确认是否有效。在确认前，我不会把其中的赔偿金额作为现行标准。&#x27;
+        },
+        {
+          id: &#x27;card&#x27;, state: &#x27;pending&#x27;, title: &#x27;校园卡服务入口与办理说明&#x27;,
+          source: &#x27;深圳大学信息中心 · 官方网页&#x27;,
+          tags: [&#x27;校园卡&#x27;, &#x27;办事指南&#x27;, &#x27;在校生&#x27;],
+          alert: &#x27;来源可靠；还需要补充粤海、丽湖办理地点和开放时间。&#x27;,
+          excerpt: &#x27;信息中心提供校园卡相关服务入口，涉及校园卡业务办理、使用说明和常见问题。&#x27;,
+          questions: [&#x27;校园卡丢了怎么办？&#x27;, &#x27;校园卡在哪里补办？&#x27;], linked: [true, false],
+          preview: &#x27;校园卡相关业务可先通过信息中心校园卡服务入口办理。具体补办地点和开放时间正在核验，我会在确认校区后给你准确指引。&#x27;
+        },
+        {
+          id: &#x27;library-hours&#x27;, state: &#x27;pending&#x27;, title: &#x27;图书馆开放时间&#x27;,
+          source: &#x27;深圳大学图书馆 · 服务页面&#x27;,
+          tags: [&#x27;图书馆&#x27;, &#x27;开放时间&#x27;, &#x27;校区&#x27;],
+          alert: &#x27;需要按粤海、丽湖馆区拆分，并记录节假日临时调整的时效。&#x27;,
+          excerpt: &#x27;页面分别列出各馆区和服务空间的开放安排，节假日期间可能另行通知。&#x27;,
+          questions: [&#x27;图书馆几点开门？&#x27;, &#x27;丽湖图书馆周末开放吗？&#x27;], linked: [true, true],
+          preview: &#x27;你想问粤海还是丽湖校区？两边开放安排不同，我会按校区给出时间，并附上图书馆官方来源。&#x27;
+        },
+        {
+          id: &#x27;calis&#x27;, state: &#x27;passed&#x27;, title: &#x27;CALIS 馆际互借操作指南&#x27;,
+          source: &#x27;深圳大学图书馆 · PDF 1 页 · 已逐页检查&#x27;,
+          tags: [&#x27;图书馆&#x27;, &#x27;馆际互借&#x27;, &#x27;操作指南&#x27;],
+          alert: &#x27;正文、入口和联系方式完整，已关联问题，可进入首轮知识库。&#x27;,
+          excerpt: &#x27;首次使用需注册并通过校园卡统一身份认证，完善联系电话和邮箱；提交申请时选择“复制—非返还”。&#x27;,
+          questions: [&#x27;怎么申请馆际互借？&#x27;, &#x27;CALIS 怎么注册？&#x27;], linked: [true, true],
+          preview: &#x27;首次使用 CALIS 需要注册，并使用校园卡统一身份认证。完善联系方式后提交文献申请，申请方式选择“复制—非返还”。&#x27;
+        }
+      ];
+
+      const statusText = { pending: &#x27;待审核&#x27;, hold: &#x27;需核验&#x27;, passed: &#x27;已通过&#x27; };
+      let selectedId = data[0].id;
+      let filter = &#x27;all&#x27;;
+
+      const records = root.querySelector(&#x27;#lr-records&#x27;);
+      const empty = root.querySelector(&#x27;#lr-empty&#x27;);
+      const search = root.querySelector(&#x27;#lr-search&#x27;);
+      const toast = root.querySelector(&#x27;#lr-toast&#x27;);
+      const preview = root.querySelector(&#x27;#lr-preview&#x27;);
+
+      function selected() { return data.find(item =&gt; item.id === selectedId) || data[0]; }
+
+      function renderCounts() {
+        root.querySelector(&#x27;#lr-pending-count&#x27;).textContent = data.filter(item =&gt; item.state !== &#x27;passed&#x27;).length;
+        root.querySelector(&#x27;#lr-pass-count&#x27;).textContent = data.filter(item =&gt; item.state === &#x27;passed&#x27;).length;
+        root.querySelector(&#x27;#lr-progress&#x27;).textContent = `本轮已审核 ${data.filter(item =&gt; item.state === &#x27;passed&#x27;).length} / ${data.length} 条 · 所有操作可撤回`;
+      }
+
+      function renderRecords() {
+        const term = search.value.trim().toLowerCase();
+        const visible = data.filter(item =&gt; {
+          const matchesState = filter === &#x27;all&#x27; || item.state === filter;
+          const haystack = [item.title, item.source, ...item.tags, ...item.questions].join(&#x27; &#x27;).toLowerCase();
+          return matchesState &amp;&amp; (!term || haystack.includes(term));
+        });
+        root.querySelector(&#x27;#lr-visible-count&#x27;).textContent = `${visible.length} 条`;
+        records.innerHTML = &#x27;&#x27;;
+        empty.style.display = visible.length ? &#x27;none&#x27; : &#x27;block&#x27;;
+        visible.forEach(item =&gt; {
+          const button = document.createElement(&#x27;button&#x27;);
+          button.type = &#x27;button&#x27;;
+          button.className = &#x27;lr-record&#x27;;
+          button.setAttribute(&#x27;aria-current&#x27;, String(item.id === selectedId));
+          button.innerHTML = `&lt;div class=&quot;lr-record-top&quot;&gt;&lt;span class=&quot;lr-record-title&quot;&gt;&lt;/span&gt;&lt;span class=&quot;lr-status&quot; data-state=&quot;${item.state}&quot;&gt;${statusText[item.state]}&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;lr-record-meta&quot;&gt;&lt;/div&gt;`;
+          button.querySelector(&#x27;.lr-record-title&#x27;).textContent = item.title;
+          button.querySelector(&#x27;.lr-record-meta&#x27;).textContent = `${item.tags[0]} · ${item.questions.length} 个关联问题`;
+          button.addEventListener(&#x27;click&#x27;, () =&gt; { selectedId = item.id; preview.dataset.open = &#x27;false&#x27;; toast.textContent = &#x27;&#x27;; render(); });
+          records.appendChild(button);
+        });
+      }
+
+      function renderDetail() {
+        const item = selected();
+        root.querySelector(&#x27;#lr-detail-title&#x27;).textContent = item.title;
+        root.querySelector(&#x27;#lr-detail-source&#x27;).textContent = item.source;
+        const status = root.querySelector(&#x27;#lr-detail-status&#x27;);
+        status.dataset.state = item.state;
+        status.textContent = statusText[item.state];
+        root.querySelector(&#x27;#lr-tags&#x27;).innerHTML = item.tags.map(tag =&gt; `&lt;span class=&quot;lr-tag&quot;&gt;${tag}&lt;/span&gt;`).join(&#x27;&#x27;);
+        root.querySelector(&#x27;#lr-alert&#x27;).textContent = item.alert;
+        root.querySelector(&#x27;#lr-excerpt&#x27;).textContent = item.excerpt;
+        const questions = root.querySelector(&#x27;#lr-questions&#x27;);
+        questions.innerHTML = &#x27;&#x27;;
+        item.questions.forEach((question, index) =&gt; {
+          const button = document.createElement(&#x27;button&#x27;);
+          button.type = &#x27;button&#x27;;
+          button.className = &#x27;lr-question&#x27;;
+          button.setAttribute(&#x27;aria-pressed&#x27;, String(item.linked[index]));
+          button.textContent = `${item.linked[index] ? &#x27;✓ &#x27; : &#x27;+ &#x27;}${question}`;
+          button.addEventListener(&#x27;click&#x27;, () =&gt; { item.linked[index] = !item.linked[index]; renderDetail(); });
+          questions.appendChild(button);
+        });
+        root.querySelector(&#x27;#lr-preview-text&#x27;).textContent = item.preview;
+      }
+
+      function render() { renderCounts(); renderRecords(); renderDetail(); }
+
+      root.querySelectorAll(&#x27;.lr-filter&#x27;).forEach(button =&gt; {
+        button.addEventListener(&#x27;click&#x27;, () =&gt; {
+          filter = button.dataset.filter;
+          root.querySelectorAll(&#x27;.lr-filter&#x27;).forEach(peer =&gt; peer.setAttribute(&#x27;aria-pressed&#x27;, String(peer === button)));
+          renderRecords();
+        });
+      });
+      search.addEventListener(&#x27;input&#x27;, renderRecords);
+
+      root.querySelectorAll(&#x27;[data-review]&#x27;).forEach(button =&gt; {
+        button.addEventListener(&#x27;click&#x27;, () =&gt; {
+          const item = selected();
+          item.state = button.dataset.review;
+          toast.textContent = item.state === &#x27;passed&#x27; ? &#x27;已通过：将进入 RAG 准入队列。&#x27; : &#x27;已标记：等待补充或时效核验。&#x27;;
+          renderCounts(); renderRecords(); renderDetail();
+        });
+      });
+
+      root.querySelector(&#x27;#lr-preview-button&#x27;).addEventListener(&#x27;click&#x27;, () =&gt; {
+        preview.dataset.open = preview.dataset.open === &#x27;true&#x27; ? &#x27;false&#x27; : &#x27;true&#x27;;
+      });
+
+      root.querySelectorAll(&#x27;.lr-tab&#x27;).forEach(button =&gt; {
+        button.addEventListener(&#x27;click&#x27;, () =&gt; {
+          root.querySelectorAll(&#x27;.lr-tab&#x27;).forEach(peer =&gt; peer.setAttribute(&#x27;aria-selected&#x27;, String(peer === button)));
+          root.querySelector(&#x27;#lr-view-subtitle&#x27;).textContent = `${button.dataset.view} · ${button.dataset.view === &#x27;资料审核&#x27; ? &#x27;把原始网页变成可靠答案&#x27; : &#x27;第一版会在同一工作台完成&#x27;}`;
+          toast.textContent = button.dataset.view === &#x27;资料审核&#x27; ? &#x27;&#x27; : `已切到“${button.dataset.view}”预览；正式版会显示对应工作流。`;
+        });
+      });
+
+      root.querySelector(&#x27;#lr-sync&#x27;).addEventListener(&#x27;click&#x27;, () =&gt; { toast.textContent = &#x27;采集状态已同步：611 页、80 个附件。&#x27;; });
+      root.querySelector(&#x27;#lr-build&#x27;).addEventListener(&#x27;click&#x27;, async () =&gt; {
+        if (window.openai &amp;&amp; window.openai.sendFollowUpMessage) {
+          await window.openai.sendFollowUpMessage({
+            title: &#x27;开始开发知识审核台&#x27;,
+            prompt: &#x27;我确认采用这个 Liko 知识准备台方案。请在 E:\\校园sun项目 中开始开发可运行版本，优先实现采集状态、资料审核、问题关联、RAG 准入和审核结果持久化。&#x27;
+          });
+        } else {
+          toast.textContent = &#x27;方案已确认，可以开始开发可运行版本。&#x27;;
+        }
+      });
+
+      render();
+    })();
+  &lt;/script&gt;
+&lt;/div&gt;
+
+&lt;script src=&quot;https://unpkg.com/@floating-ui/core@1.7.3/dist/floating-ui.core.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;https://unpkg.com/@floating-ui/dom@1.7.4/dist/floating-ui.dom.umd.min.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  if (window.FloatingUIDOM == null) {
+    return;
+  }
+  const { autoUpdate, computePosition, flip, offset, shift, size } =
+    window.FloatingUIDOM;
+  const tooltipPlacements = new Set([&quot;top&quot;, &quot;right&quot;, &quot;bottom&quot;, &quot;left&quot;]);
+  const tooltipId = `codex-visualization-tooltip-${
+    window.crypto?.randomUUID?.() ?? Date.now().toString(36)
+  }`;
+  const tooltipGap = 5;
+  const hoverDelay = 700;
+  const skipDelay = 300;
+  let activeTrigger = null;
+  let pendingTrigger = null;
+  let tooltip = null;
+  let openTimeout = null;
+  let autoUpdateCleanup = null;
+  let positionRequest = 0;
+  let skipDelayUntil = 0;
+
+  const getTrigger = (target) =&gt;
+    target?.nodeType === Node.ELEMENT_NODE
+      ? target.closest(&quot;[data-tooltip]&quot;)
+      : null;
+  const containsTarget = (trigger, target) =&gt;
+    target?.nodeType != null &amp;&amp; trigger.contains(target);
+  const getContent = (trigger) =&gt;
+    trigger.getAttribute(&quot;data-tooltip&quot;)?.trim() ?? &quot;&quot;;
+  const getPlacement = (trigger) =&gt; {
+    const placement = trigger.getAttribute(&quot;data-tooltip-placement&quot;);
+    return tooltipPlacements.has(placement) ? placement : &quot;top&quot;;
+  };
+  const getTooltip = () =&gt; {
+    if (tooltip == null) {
+      tooltip = document.createElement(&quot;div&quot;);
+      tooltip.id = tooltipId;
+      tooltip.className = &quot;tooltip&quot;;
+      tooltip.setAttribute(&quot;role&quot;, &quot;tooltip&quot;);
+    }
+    return tooltip;
+  };
+  const setDescribedBy = (trigger, described) =&gt; {
+    const ids = new Set(
+      (trigger.getAttribute(&quot;aria-describedby&quot;) ?? &quot;&quot;)
+        .split(/\s+/)
+        .filter(Boolean),
+    );
+    if (described) {
+      ids.add(tooltipId);
+    } else {
+      ids.delete(tooltipId);
+    }
+    if (ids.size === 0) {
+      trigger.removeAttribute(&quot;aria-describedby&quot;);
+    } else {
+      trigger.setAttribute(&quot;aria-describedby&quot;, [...ids].join(&quot; &quot;));
+    }
+  };
+  const clearOpenTimeout = () =&gt; {
+    if (openTimeout != null) {
+      window.clearTimeout(openTimeout);
+      openTimeout = null;
+    }
+    pendingTrigger = null;
+  };
+  const closeTooltip = (activateSkipDelay = true) =&gt; {
+    clearOpenTimeout();
+    positionRequest += 1;
+    autoUpdateCleanup?.();
+    autoUpdateCleanup = null;
+    if (activeTrigger == null) {
+      return;
+    }
+    setDescribedBy(activeTrigger, false);
+    activeTrigger = null;
+    tooltip?.remove();
+    if (activateSkipDelay) {
+      skipDelayUntil = Date.now() + skipDelay;
+    }
+  };
+  const updatePosition = (trigger, floating) =&gt; {
+    const request = ++positionRequest;
+    void computePosition(trigger, floating, {
+      middleware: [
+        offset(tooltipGap),
+        flip({ padding: tooltipGap }),
+        shift({ padding: tooltipGap }),
+        size({
+          padding: tooltipGap,
+          apply({ availableHeight, availableWidth, elements }) {
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-width&quot;,
+              `${Math.max(0, availableWidth)}px`,
+            );
+            elements.floating.style.setProperty(
+              &quot;--tooltip-available-height&quot;,
+              `${Math.max(0, availableHeight)}px`,
+            );
+          },
+        }),
+      ],
+      placement: getPlacement(trigger),
+      strategy: &quot;fixed&quot;,
+    })
+      .then(({ x, y }) =&gt; {
+        if (activeTrigger !== trigger || request !== positionRequest) {
+          return;
+        }
+        const scale = window.devicePixelRatio || 1;
+        floating.style.transform = `translate(${Math.round(x * scale) / scale}px, ${Math.round(y * scale) / scale}px)`;
+        floating.style.visibility = &quot;visible&quot;;
+      })
+      .catch(() =&gt; {
+        if (activeTrigger === trigger &amp;&amp; request === positionRequest) {
+          closeTooltip(false);
+        }
+      });
+  };
+  const openTooltip = (trigger) =&gt; {
+    const content = getContent(trigger);
+    if (!trigger.isConnected || content.length === 0) {
+      return;
+    }
+    clearOpenTimeout();
+    if (activeTrigger === trigger) {
+      return;
+    }
+    closeTooltip();
+    const floating = getTooltip();
+    floating.textContent = content;
+    floating.style.visibility = &quot;hidden&quot;;
+    floating.style.transform = &quot;translate(0, 0)&quot;;
+    document.body.appendChild(floating);
+    activeTrigger = trigger;
+    setDescribedBy(trigger, true);
+    autoUpdateCleanup = autoUpdate(trigger, floating, () =&gt; {
+      updatePosition(trigger, floating);
+    });
+  };
+  const requestOpen = (trigger, immediate = false) =&gt; {
+    if (
+      getContent(trigger).length === 0 ||
+      activeTrigger === trigger ||
+      pendingTrigger === trigger
+    ) {
+      return;
+    }
+    clearOpenTimeout();
+    pendingTrigger = trigger;
+    const delay =
+      immediate || activeTrigger != null || Date.now() &lt; skipDelayUntil
+        ? 0
+        : hoverDelay;
+    if (delay === 0) {
+      openTooltip(trigger);
+      return;
+    }
+    openTimeout = window.setTimeout(() =&gt; {
+      openTimeout = null;
+      pendingTrigger = null;
+      openTooltip(trigger);
+    }, delay);
+  };
+  const handlePointerOpen = (event) =&gt; {
+    if (event.pointerType === &quot;touch&quot;) {
+      return;
+    }
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    requestOpen(trigger);
+  };
+  const handleLeave = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger == null || containsTarget(trigger, event.relatedTarget)) {
+      return;
+    }
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const handleFocusIn = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (trigger?.matches(&quot;:focus-visible&quot;)) {
+      requestOpen(trigger, true);
+    }
+  };
+  const handleKeyDown = (event) =&gt; {
+    if (event.key === &quot;Escape&quot;) {
+      closeTooltip();
+    }
+  };
+  const handleContextMenu = (event) =&gt; {
+    const trigger = getTrigger(event.target);
+    if (activeTrigger === trigger || pendingTrigger === trigger) {
+      closeTooltip();
+    }
+  };
+  const destroy = () =&gt; {
+    closeTooltip(false);
+    document.removeEventListener(&quot;pointerover&quot;, handlePointerOpen);
+    document.removeEventListener(&quot;pointerout&quot;, handleLeave);
+    document.removeEventListener(&quot;focusin&quot;, handleFocusIn);
+    document.removeEventListener(&quot;focusout&quot;, handleLeave);
+    document.removeEventListener(&quot;keydown&quot;, handleKeyDown);
+    document.removeEventListener(&quot;contextmenu&quot;, handleContextMenu);
+    tooltip = null;
+  };
+
+  document.addEventListener(&quot;pointerover&quot;, handlePointerOpen);
+  document.addEventListener(&quot;pointerout&quot;, handleLeave);
+  document.addEventListener(&quot;focusin&quot;, handleFocusIn);
+  document.addEventListener(&quot;focusout&quot;, handleLeave);
+  document.addEventListener(&quot;keydown&quot;, handleKeyDown);
+  document.addEventListener(&quot;contextmenu&quot;, handleContextMenu);
+  window.addEventListener(&quot;pagehide&quot;, destroy, { once: true });
+})();
+&lt;/script&gt;
+&lt;script id=&quot;codex-visualization-lucide&quot; async src=&quot;https://unpkg.com/lucide@1.17.0/dist/umd/lucide.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+  const initialize = () =&gt; {
+    globalThis.lucide?.createIcons({ attrs: { width: 16, height: 16 } });
+  };
+  if (globalThis.lucide != null) {
+    initialize();
+    return;
+  }
+  document
+    .getElementById(&quot;codex-visualization-lucide&quot;)
+    ?.addEventListener(&quot;load&quot;, initialize, { once: true });
+})();
+&lt;/script&gt;
+
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
+</body>
+</html>

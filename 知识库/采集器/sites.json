@@ -1,0 +1,74 @@
+[
+  {
+    "site_id": "MAIN",
+    "name": "深圳大学主页",
+    "seed_url": "https://www.szu.edu.cn/",
+    "category": "学校综合信息"
+  },
+  {
+    "site_id": "PUBLIC",
+    "name": "深圳大学信息公开网",
+    "seed_url": "https://xxgk.szu.edu.cn/",
+    "category": "规章制度与公开信息"
+  },
+  {
+    "site_id": "JWB",
+    "name": "深圳大学教务部",
+    "seed_url": "https://jwb.szu.edu.cn/",
+    "category": "教务与本科培养"
+  },
+  {
+    "site_id": "XSB",
+    "name": "深圳大学学生部",
+    "seed_url": "https://xsb.szu.edu.cn/",
+    "category": "学生事务与资助"
+  },
+  {
+    "site_id": "IT",
+    "name": "深圳大学信息中心",
+    "seed_url": "https://it.szu.edu.cn/",
+    "category": "校园网、校园卡与信息服务"
+  },
+  {
+    "site_id": "ZS",
+    "name": "深圳大学本科招生网",
+    "seed_url": "https://zs.szu.edu.cn/",
+    "category": "本科招生与新生信息"
+  },
+  {
+    "site_id": "YZ",
+    "name": "深圳大学研究生招生网",
+    "seed_url": "https://yz.szu.edu.cn/",
+    "category": "研究生招生与入学"
+  },
+  {
+    "site_id": "GRA",
+    "name": "深圳大学研究生院",
+    "seed_url": "https://gra.szu.edu.cn/",
+    "category": "研究生培养与学位"
+  },
+  {
+    "site_id": "LIB",
+    "name": "深圳大学图书馆",
+    "seed_url": "https://www.lib.szu.edu.cn/services",
+    "category": "图书馆与学习资源"
+  },
+  {
+    "site_id": "HQB",
+    "name": "深圳大学后勤保障部",
+    "seed_url": "https://hqb.szu.edu.cn/",
+    "category": "宿舍、餐饮、生活与后勤"
+  },
+  {
+    "site_id": "BAOWEI",
+    "name": "深圳大学安全保卫部",
+    "seed_url": "https://baowei.szu.edu.cn/",
+    "category": "交通、户证与校园安全"
+  },
+  {
+    "site_id": "NEWS",
+    "name": "深圳大学新闻网",
+    "seed_url": "https://news.szu.edu.cn/",
+    "category": "学校新闻与通知线索"
+  }
+]

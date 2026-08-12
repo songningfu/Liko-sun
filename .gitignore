@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Office temporary files
+~$*
+
+# Dependencies and caches
+node_modules/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.vite/
+
+# Build and test output
+dist/
+build/
+coverage/
+
+# Local working artifacts
+.codex-analysis/
+.DS_Store
+Thumbs.db
+
