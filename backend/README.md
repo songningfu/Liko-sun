@@ -52,6 +52,8 @@ cd backend
 
 FastGPT 需要同时配置 `FASTGPT_BASE_URL`、`FASTGPT_API_KEY` 和 `FASTGPT_APP_ID` 才会启用。`FASTGPT_BASE_URL` 可以填写实例根地址、以 `/api` 结尾的 OpenAPI BaseURL，或完整的 `chat/completions` 地址。
 
+FastGPT 管理后台中的应用配置分为调试草稿和 API 使用的已发布版本。修改角色提示词、知识库或检索参数后，必须点击 **保存 → 保存并发布**，并在版本弹窗中再次点击 **确认**；只显示“已保存”并不代表手机端 API 已更新。发布后至少验证“你是谁？”和一个应命中知识库的校园问题，确认身份为 Liko、运行链路包含知识库搜索且返回官方来源。
+
 账号服务需同时配置 `DATABASE_URL` 和至少 32 字符的随机 `SESSION_SECRET`。生产数据库使用 PostgreSQL，例如 `postgresql://...`；首次连接会自动创建当前版本所需表。密码使用 Argon2id 摘要，会话令牌和恢复码只保存不可逆摘要。默认会话 30 天、游客每天 10 次、登录用户每天 50 次，均可通过环境变量调整。生产环境 Cookie 自动启用 `Secure`、`HttpOnly` 与 `SameSite=Lax`。
 
 长期记忆默认关闭。只有 `MEMORY_ENABLED=true` 且 Mem0 的模型、向量模型和独立 PostgreSQL 配置完整时，健康检查才会返回 `memoryConfigured: true`。当前采用：
