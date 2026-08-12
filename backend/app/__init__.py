@@ -1,0 +1,1 @@
+"""Liko backend application package."""

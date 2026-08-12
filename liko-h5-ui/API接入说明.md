@@ -1,22 +1,47 @@
 # Liko 问答 API 接入说明
 
-当前页面是 UI 原型，只使用示例内容，不调用真实模型。
+当前页面已经接入自有后端的 SSE 接口契约。未配置 FastGPT 时，后端返回联调占位且不会把示例内容作为答案；配置完整后，后端会代理 FastGPT 的真实流式问答。
 
 ## 安全边界
 
 - H5 不能直接保存或调用 DeepSeek API Key。
-- 正确链路是：`手机 H5 → 自有后端 /api/chat/stream → DeepSeek`。
-- Key 只保存在后端环境变量 `DEEPSEEK_API_KEY`，不得写进 HTML、JavaScript、`VITE_*`、浏览器缓存或日志。
+- 正确链路是：`手机 H5 → 自有 FastAPI → 自托管 FastGPT → 模型服务`。
+- FastGPT 应用 Key 只保存在 FastAPI 的后端环境变量 `FASTGPT_API_KEY`；模型服务 Key 只保存在 FastGPT 部署环境中。两者都不得写进 HTML、JavaScript、`VITE_*`、浏览器缓存或日志。
 - 开发、测试和生产使用不同 Key；已经公开发送过的 Key 应撤销后重新生成。
 
 ## 第一版建议
 
 - 联调模型：`deepseek-v4-flash`。
+- 向量模型：`bge-m3`。
 - 默认关闭思考模式，校园常规问答优先追求速度和成本。
 - 单次回答建议限制在约 500–800 个输出 token。
 - 前端只提交 `conversationId`、`requestId` 和用户问题，不允许前端指定模型、系统提示词或输出上限。
 - 后端负责拼接角色提示、历史对话与以后接入的 RAG 检索结果。
 - 流式响应只向前端发送 `meta`、`delta`、`sources`、`done`、`error` 等业务事件。
+
+## 当前 SSE 契约
+
+`POST /api/chat/stream` 请求体：
+
+```json
+{
+  "requestId": "web_...",
+  "conversationId": null,
+  "message": "校园卡丢了怎么补办？",
+  "campus": "粤海",
+  "source": "input"
+}
+```
+
+响应的 `Content-Type` 为 `text/event-stream`：
+
+- `meta`：`requestId`、`conversationId`、`answerId` 和当前运行模式。
+- `delta`：增量文本，字段为 `text`。
+- `sources`：官方来源数组；无可靠来源时必须为空数组。
+- `done`：结束原因与是否允许反馈。
+- `error`：可展示的业务错误；不得包含密钥、上游请求头或内部堆栈。
+
+未配置上游时以 `integration_stub` 结束，`canRate` 为 `false`。真实答案成功生成并获得稳定 `answerId` 后才允许提交反馈。FastGPT 的 `flowResponses.quoteList` 会在后端转换为来源；只有 `https://szu.edu.cn` 及其 HTTPS 子域名能够作为校园官方来源返回 H5。
 
 ## 开发期保护
 
