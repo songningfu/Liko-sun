@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liko 知识工厂</title>
+<style>
+  :root {
+    --bg: #faf7f4; --panel: #ffffff; --line: #ece4dd;
+    --text: #3d3330; --muted: #9a8d86;
+    --accent: #d94f3d; --accent-soft: #fdeee9;
+    --ok: #2e9e6b; --warn: #d99413; --err: #d94f3d;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; font-size: 14px; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header .badge { background: var(--accent-soft); color: var(--accent); font-size: 12px; padding: 2px 10px; border-radius: 999px; }
+  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav button { border: none; background: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--muted); }
+  nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  main { max-width: 1080px; margin: 24px auto; padding: 0 20px; }
+  .page { display: none; } .page.active { display: block; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+  .card .num { font-size: 26px; font-weight: 700; } .card .label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .panel h2 { font-size: 15px; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .tag.official { background: #e8f5ee; color: var(--ok); }
+  .tag.unofficial { background: #fdf3e3; color: var(--warn); }
+  .tag.ok { background: #e8f5ee; color: var(--ok); }
+  .tag.failed { background: var(--accent-soft); color: var(--err); }
+  .tag.pending { background: #f2eeea; color: var(--muted); }
+  .tag.unchanged { background: #eef3fb; color: #5b7fb8; }
+  input, select, textarea { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; font-family: inherit; background: #fff; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  .btn { border: none; background: var(--accent); color: #fff; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .btn:hover { opacity: .9; } .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: #f2eeea; color: var(--text); }
+  .btn.small { padding: 4px 10px; font-size: 12px; }
+  .form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  #log { background: #2b2422; color: #e8ded8; border-radius: var(--radius); padding: 14px; height: 380px; overflow-y: auto; font-family: "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.7; }
+  #log .error { color: #ff9d8f; } #log .time { color: #8a7d75; margin-right: 8px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .src-url { color: var(--muted); font-size: 12px; word-break: break-all; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+  a { color: var(--accent); }
+  .switch { display: flex; align-items: center; gap: 8px; }
+  details { margin-top: 6px; } summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🍒 Liko 知识工厂</h1>
+  <span class="badge">本地运行 · 数据不出本机</span>
+  <nav>
+    <button data-page="dashboard" class="active">概览</button>
+    <button data-page="sources">来源管理</button>
+    <button data-page="run">运行任务</button>
+    <button data-page="exports">导出</button>
+    <button data-page="settings">设置</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 概览 -->
+  <section class="page active" id="page-dashboard">
+    <div class="cards" id="stat-cards"></div>
+    <div class="panel">
+      <h2>最近流水线事件</h2>
+      <div id="recent-events" class="muted">暂无运行记录</div>
+    </div>
+  </section>
+
+  <!-- 来源管理 -->
+  <section class="page" id="page-sources">
+    <div class="panel">
+      <h2>添加来源</h2>
+      <div class="form-grid">
+        <input id="add-url" placeholder="URL（官网 https://*.szu.edu.cn / 内网 / 公众号 mp.weixin.qq.com 链接）">
+        <select id="add-type">
+          <option value="official">官网公网</option>
+          <option value="internal">深大内网</option>
+          <option value="wechat">公众号文章</option>
+        </select>
+        <input id="add-title" placeholder="标题（可留空，抓取时自动识别）">
+      </div>
+      <div class="form-grid-2">
+        <input id="add-dept" placeholder="发布部门（如：教务部）">
+        <select id="add-campus">
+          <option value="通用">通用</option><option value="粤海">粤海</option>
+          <option value="丽湖">丽湖</option><option value="粤海/丽湖">粤海/丽湖</option>
+        </select>
+        <input id="add-category" placeholder="分类（如：校园卡、新生报到）">
+      </div>
+      <button class="btn" onclick="addSource()">添加</button>
+      <span class="muted" id="add-msg"></span>
+    </div>
+    <div class="panel">
+      <h2>批量导入链接</h2>
+      <div class="row">
+        <select id="import-type" style="width:180px">
+          <option value="wechat">公众号文章</option>
+          <option value="official">官网公网</option>
+          <option value="internal">深大内网</option>
+        </select>
+        <span class="muted">每行一条，格式：<code>URL</code> 或 <code>URL|标题</code></span>
+      </div>
+      <textarea id="import-text" rows="4" placeholder="https://mp.weixin.qq.com/s/xxx|深大食堂新通知&#10;https://mp.weixin.qq.com/s/yyy"></textarea>
+      <div style="margin-top:10px"><button class="btn ghost" onclick="importSources()">批量导入</button> <span class="muted" id="import-msg"></span></div>
+    </div>
+    <div class="panel">
+      <h2>来源列表</h2>
+      <table><thead><tr>
+        <th style="width:70px">编号</th><th>来源</th><th style="width:90px">类型</th>
+        <th style="width:80px">状态</th><th style="width:150px">上次抓取</th><th style="width:130px">操作</th>
+      </tr></thead><tbody id="source-rows"></tbody></table>
+      <div class="empty" id="source-empty" style="display:none">还没有来源，先在上方添加</div>
+    </div>
+  </section>
+
+  <!-- 运行任务 -->
+  <section class="page" id="page-run">
+    <div class="panel">
+      <h2>全站大搜查（推荐主用）</h2>
+      <p class="muted" style="margin-bottom:10px">从 12 个深大官方站点种子自动发现页面，部门/分类/主题全部自动推断，不用填任何信息。中断后再点自动续跑；已抓页面超过 30 天才会重新检查变更。</p>
+      <div class="row">
+        <button class="btn" id="crawl-btn" onclick="runCrawl()">🔍 开始全站搜查</button>
+        <span class="muted" id="crawl-stats"></span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>运行流水线（仅手动登记的来源）</h2>
+      <div class="row">
+        <button class="btn ghost" id="run-btn" onclick="runPipeline()">▶ 运行全部启用来源</button>
+        <span class="muted">抓取 → 变更检测 → 清洗 → 去重 → 切块 → 导出 FastGPT 包</span>
+      </div>
+      <div class="row"><span class="muted" id="run-status">空闲</span></div>
+    </div>
+    <div class="panel"><h2>实时日志</h2><div id="log"></div></div>
+  </section>
+
+  <!-- 导出 -->
+  <section class="page" id="page-exports">
+    <div class="panel">
+      <h2>FastGPT 导入包</h2>
+      <p class="muted" style="margin-bottom:12px">每次运行后自动生成，按主题合并。官方来源与非官方待核验资料分目录存放。下载后导入 FastGPT 知识库即可。</p>
+      <table><thead><tr><th>文件</th><th style="width:100px">大小</th><th style="width:100px">操作</th></tr></thead>
+      <tbody id="export-rows"></tbody></table>
+      <div class="empty" id="export-empty" style="display:none">暂无导出包，先运行一次流水线</div>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section class="page" id="page-settings">
+    <div class="panel">
+      <h2>内网登录（统一身份认证）</h2>
+      <p class="muted" style="margin-bottom:10px">点击下方按钮会打开浏览器窗口，手动登录后关闭窗口即可保存会话。之后内网采集全自动；会话过期会提示重新登录。</p>
+      <div class="row">
+        <input id="login-url" style="max-width:360px" placeholder="内网登录入口 URL">
+        <button class="btn" onclick="startLogin()">打开登录窗口</button>
+        <span class="muted" id="login-status"></span>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>全站搜查频率</h2>
+      <div class="row">
+        <select id="crawl-schedule" style="width:160px">
+          <option value="weekly">每周一次（推荐）</option>
+          <option value="biweekly">每两星期</option>
+          <option value="monthly">每月一次</option>
+          <option value="off">关闭</option>
+        </select>
+        <input type="time" id="crawl-time" style="width:120px">
+        <span class="muted">每轮最多</span>
+        <input type="number" id="crawl-max" min="10" max="500" style="width:90px">
+        <span class="muted">页（控制负载，下轮自动续跑）</span>
+      </div>
+      <p class="muted">到点自动执行全站搜查并更新导出包。需要本工具保持运行。</p>
+    </div>
+    <div class="panel">
+      <h2>定时自动采集</h2>
+      <div class="row">
+        <label class="switch"><input type="checkbox" id="sched-enabled" style="width:auto"> 每天自动运行</label>
+        <input type="time" id="sched-time" style="width:120px">
+        <button class="btn ghost" onclick="saveSettings()">保存</button>
+        <span class="muted" id="settings-msg"></span>
+      </div>
+      <p class="muted">到点自动抓取全部启用来源，内容有变化才重新清洗导出。需要本工具保持运行。</p>
+    </div>
+    <div class="panel">
+      <h2>抓取间隔</h2>
+      <div class="row">
+        <input type="number" id="delay" min="1" max="30" style="width:100px">
+        <span class="muted">秒（相邻请求间隔，避免给学校网站造成压力）</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const TYPE_LABEL = { official: "官网公网", internal: "内网", wechat: "公众号" };
+
+document.querySelectorAll("nav button").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    $("page-" + btn.dataset.page).classList.add("active");
+    if (btn.dataset.page === "dashboard") loadOverview();
+    if (btn.dataset.page === "sources") loadSources();
+    if (btn.dataset.page === "exports") loadExports();
+    if (btn.dataset.page === "settings") loadSettings();
+    if (btn.dataset.page === "run") loadCrawlStats();
+  };
+});
+
+async function api(path, options) {
+  const resp = await fetch(path, options);
+  if (!resp.ok && resp.status !== 204) {
+    const body = await resp.json().catch(() => ({}));
+    throw new Error(body.detail || `HTTP ${resp.status}`);
+  }
+  return resp.status === 204 ? null : resp.json();
+}
+
+async function loadOverview() {
+  const data = await api("/api/overview");
+  const s = data.sources;
+  $("stat-cards").innerHTML = [
+    [data.crawl.total_crawled, "全站已抓页面"], [data.crawl.queue_left, "待爬队列"],
+    [s.total, "登记来源"], [s.ok, "抓取成功"],
+    [s.failed, "失败"], [s.pending, "待首次抓取"],
+  ].map(([n, l]) => `<div class="card"><div class="num">${n}</div><div class="label">${l}</div></div>`).join("");
+  const internal = data.internal;
+  const crawlLabel = { weekly: "每周一", biweekly: "每两星期", monthly: "每月 1 日", off: "关闭" }[data.settings.crawl_schedule];
+  $("recent-events").innerHTML =
+    `<p>最近导出包：${data.last_export || "暂无"}</p>` +
+    `<p>内网会话：${internal.has_session ? "已保存" : "未登录"}　全站搜查：${crawlLabel} ${data.settings.crawl_schedule === "off" ? "" : data.settings.crawl_time}</p>` +
+    `<p>流水线状态：${data.running ? "运行中" : "空闲"}</p>`;
+}
+
+async function loadSources() {
+  const list = await api("/api/sources");
+  $("source-empty").style.display = list.length ? "none" : "block";
+  $("source-rows").innerHTML = list.map(s => `<tr>
+    <td>${s.id}</td>
+    <td><div>${s.title || "（未命名）"}</div><div class="src-url">${s.url}</div>
+        ${s.last_error ? `<div class="muted" style="color:var(--err)">${s.last_error}</div>` : ""}</td>
+    <td><span class="tag ${s.official ? "official" : "unofficial"}">${TYPE_LABEL[s.source_type]}</span></td>
+    <td><span class="tag ${s.last_status}">${{pending:"待抓取",changed:"已更新",unchanged:"无变化",failed:"失败",ok:"成功",auth_expired:"需登录"}[s.last_status] || s.last_status}</span></td>
+    <td class="muted">${s.last_fetched_at ? s.last_fetched_at.slice(0, 16).replace("T", " ") : "—"}</td>
+    <td>
+      <button class="btn small ghost" onclick="toggleSource('${s.id}', ${!s.enabled})">${s.enabled ? "停用" : "启用"}</button>
+      <button class="btn small ghost" onclick="removeSource('${s.id}')">删除</button>
+    </td></tr>`).join("");
+}
+
+async function addSource() {
+  $("add-msg").textContent = "";
+  try {
+    const src = await api("/api/sources", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: $("add-url").value, source_type: $("add-type").value,
+        title: $("add-title").value, department: $("add-dept").value,
+        campus: $("add-campus").value, category: $("add-category").value }) });
+    $("add-msg").textContent = `已添加 ${src.id}`;
+    $("add-url").value = $("add-title").value = "";
+    loadSources();
+  } catch (e) { $("add-msg").textContent = e.message; }
+}
+
+async function importSources() {
+  $("import-msg").textContent = "";
+  try {
+    const r = await api("/api/sources/import", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: $("import-text").value, source_type: $("import-type").value }) });
+    $("import-msg").textContent = `成功 ${r.added.length} 条` + (r.errors.length ? `；失败：${r.errors.join("；")}` : "");
+    $("import-text").value = "";
+    loadSources();
+  } catch (e) { $("import-msg").textContent = e.message; }
+}
+
+async function toggleSource(id, enabled) {
+  await api(`/api/sources/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) });
+  loadSources();
+}
+
+async function removeSource(id) {
+  if (!confirm(`确认删除来源 ${id}？已抓取的页面文件会保留在 data/pages/。`)) return;
+  await api(`/api/sources/${id}`, { method: "DELETE" });
+  loadSources();
+}
+
+let eventSource = null;
+function appendLog(e) {
+  const line = document.createElement("div");
+  if (e.level === "error") line.className = "error";
+  line.innerHTML = `<span class="time">${(e.time || "").slice(11, 19)}</span>[${e.step}] ${e.message}`;
+  $("log").appendChild(line);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+async function runPipeline() {
+  $("run-btn").disabled = true;
+  $("run-status").textContent = "运行中…";
+  try {
+    await api("/api/pipeline/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    watchEvents(() => {
+      $("run-btn").disabled = false;
+      $("crawl-btn").disabled = false;
+      $("run-status").textContent = "已完成";
+    });
+  } catch (e) {
+    $("run-status").textContent = e.message;
+    $("run-btn").disabled = false;
+  }
+}
+
+function watchEvents(onDone) {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource("/api/pipeline/events");
+  eventSource.onmessage = msg => {
+    const e = JSON.parse(msg.data);
+    appendLog(e);
+    if (e.step === "done" || e.step === "error") {
+      eventSource.close();
+      onDone(e.step);
+    }
+  };
+}
+
+async function runCrawl() {
+  $("crawl-btn").disabled = true;
+  $("crawl-stats").textContent = "搜查中…（页面较多，日志会持续滚动，可随时离开稍后再看）";
+  try {
+    await api("/api/crawl/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    watchEvents(step => {
+      $("crawl-btn").disabled = false;
+      $("run-btn").disabled = false;
+      $("crawl-stats").textContent = step === "done" ? "本轮搜查完成" : "出错中断";
+      loadCrawlStats();
+    });
+  } catch (e) {
+    $("crawl-stats").textContent = e.message;
+    $("crawl-btn").disabled = false;
+  }
+}
+
+async function loadCrawlStats() {
+  const data = await api("/api/overview");
+  $("crawl-stats").textContent = `已累计抓取 ${data.crawl.total_crawled} 页，队列剩余 ${data.crawl.queue_left} 页`;
+}
+
+async function loadExports() {
+  const list = await api("/api/exports");
+  $("export-empty").style.display = list.length ? "none" : "block";
+  $("export-rows").innerHTML = list.map(x => `<tr>
+    <td>${x.name}</td><td class="muted">${(x.size / 1024).toFixed(1)} KB</td>
+    <td><a href="/api/exports/${x.name}" download>下载</a></td></tr>`).join("");
+}
+
+async function loadSettings() {
+  const s = await api("/api/settings");
+  $("sched-enabled").checked = s.schedule_enabled;
+  $("sched-time").value = s.schedule_time;
+  $("crawl-schedule").value = s.crawl_schedule;
+  $("crawl-time").value = s.crawl_time;
+  $("crawl-max").value = s.crawl_max_pages;
+  $("delay").value = s.request_delay_seconds;
+  $("login-url").value = s.internal_login_url;
+  const st = await api("/api/internal/status");
+  $("login-status").textContent = st.has_session ? `会话已保存；${st.message || ""}` : (st.message || "未登录");
+}
+
+async function saveSettings() {
+  await api("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ schedule_enabled: $("sched-enabled").checked, schedule_time: $("sched-time").value,
+      crawl_schedule: $("crawl-schedule").value, crawl_time: $("crawl-time").value,
+      crawl_max_pages: parseInt($("crawl-max").value) || 60,
+      request_delay_seconds: parseInt($("delay").value) || 2, internal_login_url: $("login-url").value }) });
+  $("settings-msg").textContent = "已保存";
+}
+
+async function startLogin() {
+  await api("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ internal_login_url: $("login-url").value }) });
+  await api("/api/internal/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  $("login-status").textContent = "浏览器已打开，请登录后关闭窗口…";
+  const timer = setInterval(async () => {
+    const st = await api("/api/internal/status");
+    $("login-status").textContent = st.message || "";
+    if (st.state === "done" || st.state === "error") { clearInterval(timer); loadSettings(); }
+  }, 2000);
+}
+
+loadOverview();
+</script>
+</body>
+</html>
