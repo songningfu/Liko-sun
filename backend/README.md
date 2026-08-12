@@ -11,7 +11,7 @@
 - `POST /api/auth/password`：登录状态下修改密码；旧会话全部失效。
 - `POST /api/auth/recover`：使用一次性恢复码重设密码，并换发新的恢复码。
 - `PATCH /api/auth/memory-consent`：开启或关闭长期记忆。
-- `POST /api/chat/stream`：使用 SSE 返回 `meta`、`delta`、`sources`、`done` 或 `error`。FastGPT 配置完整时代理真实问答，否则返回明确的联调占位提示。
+- `POST /api/chat/stream`：使用 SSE 返回 `meta`、`delta`、`sources`、`done` 或 `error`。FastGPT 配置完整时代理真实问答，并兼容从工作流汇总事件恢复未进入标准文本流的最终答案；否则返回明确的联调占位提示。
 - `POST /api/answers/{answerId}/feedback`：校验反馈格式。数据库未接入前返回 `not_persisted`，不会假装保存成功。
 - `GET /api/users/me/liko`：返回当前账号正式编号、年龄与固定配色；游客不生成编号。
 - `GET /api/users/me/memories`：登录、同意长期记忆且 Mem0 已配置时，查看或搜索自己的记忆。
@@ -90,7 +90,7 @@ cd backend
 - 第一版只使用账号密码，不使用手机号、邮箱或验证码；忘记密码依赖注册时的一次性恢复码。
 - 当前自动建表适合首次部署；正式公开上线前仍需引入数据库迁移版本管理。
 - Mem0 适配器与记忆管理接口已有测试覆盖，但服务器尚未安装、配置或启用 Mem0。
-- 已有 FastGPT 上游代理、连接/读取超时和安全错误转换；尚未实现自动重试、用户主动停止和限流。
+- 已有 FastGPT 上游代理、标准回答流与工作流最终答案兼容、连接/读取超时和安全错误转换；尚未实现自动重试、用户主动停止和限流。
 - 没有保存完整用户问题正文的日志。
 - Liko 状态轮换仍保存在浏览器，尚未服务端同步；编号和颜色已经由数据库持久化。
 
@@ -107,3 +107,5 @@ cd backend
 服务器环境文件不纳入仓库。完成模型提供商配置、知识库导入并创建应用后，再把 FastGPT 应用 API Key 与 App ID 写入服务器端 `/opt/liko/backend/.env`，然后重启 `liko-api.service`。
 
 账号系统已于 2026-08-12 随提交 `a99afc5` 部署到测试服务器。当前测试入口仍是 IP HTTP，因此暂用 `ENVIRONMENT=development` 让登录 Cookie 可在测试阶段保存；Cookie 仍为 HttpOnly 与 SameSite=Lax。正式开放注册前必须绑定独立域名、启用 HTTPS，并把 `ENVIRONMENT` 改回 `production`，恢复 Secure Cookie。
+
+2026-08-12 已继续部署 H5 聊天开场、回答排版、来源按标题去重和配色文案优化，并修复 FastGPT 偶发只返回来源、不返回正文的兼容问题。测试服务器健康检查仍为 `memoryConfigured: false`，长期记忆不能标记为已启用。

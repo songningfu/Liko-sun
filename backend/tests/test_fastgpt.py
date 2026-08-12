@@ -5,7 +5,12 @@ import httpx
 import pytest
 
 from app.config import Settings
-from app.fastgpt import FastGPTClient, FastGPTUpstreamError, extract_official_sources
+from app.fastgpt import (
+    FastGPTClient,
+    FastGPTUpstreamError,
+    extract_fallback_answer,
+    extract_official_sources,
+)
 
 
 def configured_settings(**overrides) -> Settings:
@@ -56,6 +61,10 @@ def test_extract_official_sources_filters_and_deduplicates() -> None:
                         "q": "重复来源",
                         "url": "https://its.szu.edu.cn/card/service",
                     },
+                    {
+                        "q": "链接后带操作提示",
+                        "url": "https://www1.szu.edu.cn/v.asp?id=191或扫码",
+                    },
                     {"q": "非校方页面", "url": "https://example.com/not-official"},
                     {"q": "非 HTTPS", "url": "http://www.szu.edu.cn/unsafe"},
                 ]
@@ -63,16 +72,77 @@ def test_extract_official_sources_filters_and_deduplicates() -> None:
         ]
     )
 
-    assert len(sources) == 1
+    assert len(sources) == 2
     assert sources[0].url == "https://its.szu.edu.cn/card/service"
     assert sources[0].title == "校园卡服务"
     assert sources[0].department == "信息中心"
+    assert sources[1].url == "https://www1.szu.edu.cn/v.asp?id=191"
+
+
+def test_extract_fallback_answer_only_uses_final_output_nodes() -> None:
+    flow_responses = [
+        {"moduleType": "datasetSearchNode", "answer": "retrieved source text"},
+        {
+            "moduleType": "chatNode",
+            "historyPreview": [
+                {"obj": "Human", "value": "question"},
+                {"obj": "AI", "value": "final campus answer"},
+            ],
+        },
+    ]
+
+    assert extract_fallback_answer(flow_responses) == "final campus answer"
+
+
+def test_stream_chat_recovers_answer_from_late_flow_response() -> None:
+    flow_responses = json.dumps(
+        [
+            {
+                "moduleType": "chatNode",
+                "historyPreview": [
+                    {"obj": "Human", "value": "question"},
+                    {"obj": "AI", "value": "recovered answer"},
+                ],
+            }
+        ]
+    )
+    upstream_sse = f"event: flowResponses\ndata: {flow_responses}\n\n"
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, content=upstream_sse.encode())
+
+    async def collect():
+        client = FastGPTClient(configured_settings(), transport=httpx.MockTransport(handler))
+        return [
+            event
+            async for event in client.stream_chat(
+                message="question",
+                conversation_id="guest_test",
+                answer_id="ans_test",
+                campus=None,
+            )
+        ]
+
+    events = asyncio.run(collect())
+    assert [(event.event, event.data) for event in events] == [
+        ("delta", {"text": "recovered answer"}),
+        ("sources", {"items": []}),
+    ]
 
 
 def test_stream_chat_translates_answer_and_late_flow_responses() -> None:
     official_url = "https://lib.szu.edu.cn/service/hours"
     flow_responses = json.dumps(
-        [{"quoteList": [{"q": "图书馆开放时间", "url": official_url}]}],
+        [
+            {
+                "moduleType": "chatNode",
+                "historyPreview": [
+                    {"obj": "Human", "value": "图书馆几点关门？"},
+                    {"obj": "AI", "value": "开放时间"},
+                ],
+                "quoteList": [{"q": "图书馆开放时间", "url": official_url}],
+            }
+        ],
         ensure_ascii=False,
     )
     upstream_sse = (

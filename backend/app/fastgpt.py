@@ -45,8 +45,12 @@ def _source_url(quote: dict[str, Any]) -> str | None:
     )
     candidates.extend(OFFICIAL_URL_PATTERN.findall(searchable))
     for candidate in candidates:
-        if isinstance(candidate, str) and _is_official_szu_url(candidate):
-            return candidate.rstrip(".,;，。；")
+        if not isinstance(candidate, str):
+            continue
+        cleaned = re.split(r"[\u3400-\u9fff]", candidate.strip(), maxsplit=1)[0]
+        cleaned = cleaned.rstrip(".,;，。；")
+        if cleaned and _is_official_szu_url(cleaned):
+            return cleaned
     return None
 
 
@@ -90,6 +94,53 @@ def extract_official_sources(flow_responses: Any) -> list[SourceItem]:
                 )
             )
     return sources
+
+
+def extract_fallback_answer(flow_responses: Any) -> str:
+    """Recover the final assistant text from FastGPT's workflow summary.
+
+    Some model/provider combinations only expose the final text in the late
+    ``flowResponses`` event even though FastGPT's regular UI can display it.
+    This deliberately ignores reasoning fields and knowledge quotes so hidden
+    chain-of-thought and retrieved source text are never shown as an answer.
+    """
+
+    if not isinstance(flow_responses, list):
+        return ""
+
+    for response in reversed(flow_responses):
+        if not isinstance(response, dict):
+            continue
+
+        module_type = response.get("moduleType")
+        if module_type == "pluginOutput":
+            plugin_output = response.get("pluginOutput")
+            if isinstance(plugin_output, dict):
+                for key in ("result", "text", "answer", "content"):
+                    value = plugin_output.get(key)
+                    if isinstance(value, str) and value.strip():
+                        return value.strip()
+            elif isinstance(plugin_output, str) and plugin_output.strip():
+                return plugin_output.strip()
+
+        if module_type not in {"chatNode", "answerNode", "agentNode"}:
+            continue
+
+        history = response.get("historyPreview")
+        if isinstance(history, list):
+            for message in reversed(history):
+                if not isinstance(message, dict) or message.get("obj") not in {"AI", "Assistant"}:
+                    continue
+                value = message.get("value")
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+
+        for key in ("answer", "text", "outputText", "finalAnswer"):
+            value = response.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+
+    return ""
 
 
 def _answer_delta(payload: Any) -> str:
@@ -150,6 +201,7 @@ class FastGPTClient:
             pool=5,
         )
 
+        answer_emitted = False
         try:
             async with httpx.AsyncClient(
                 timeout=timeout,
@@ -176,6 +228,14 @@ class FastGPTClient:
                     async for line in response.aiter_lines():
                         if line == "":
                             async for event in self._translate_event(event_name, data_lines):
+                                if event.event == "fallback_answer":
+                                    text = event.data.get("text")
+                                    if not answer_emitted and isinstance(text, str) and text:
+                                        answer_emitted = True
+                                        yield FastGPTEvent(event="delta", data={"text": text})
+                                    continue
+                                if event.event == "delta":
+                                    answer_emitted = True
                                 yield event
                             event_name = "message"
                             data_lines = []
@@ -187,6 +247,14 @@ class FastGPTClient:
 
                     if data_lines:
                         async for event in self._translate_event(event_name, data_lines):
+                            if event.event == "fallback_answer":
+                                text = event.data.get("text")
+                                if not answer_emitted and isinstance(text, str) and text:
+                                    answer_emitted = True
+                                    yield FastGPTEvent(event="delta", data={"text": text})
+                                continue
+                            if event.event == "delta":
+                                answer_emitted = True
                             yield event
         except FastGPTUpstreamError:
             raise
@@ -221,6 +289,9 @@ class FastGPTClient:
 
         if event_name == "flowResponses":
             sources = extract_official_sources(payload)
+            fallback_answer = extract_fallback_answer(payload)
+            if fallback_answer:
+                yield FastGPTEvent(event="fallback_answer", data={"text": fallback_answer})
             yield FastGPTEvent(
                 event="sources",
                 data={"items": [source.model_dump(by_alias=True) for source in sources]},

@@ -557,6 +557,18 @@
     .hot-question span { display:block; margin-top:5px; color:#9a706a; font-size:10px; }
     .hot-question:active { background:#f8f2eb; }
 
+    .chat-welcome {
+      margin: 15px 0 17px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: linear-gradient(145deg, rgba(255,255,255,.94), rgba(248,242,234,.9));
+      box-shadow: 0 10px 26px rgba(65,52,45,.04);
+    }
+    .chat-welcome-head { display:flex; align-items:center; gap:10px; }
+    .chat-welcome-copy { margin:13px 0 0; font-size:15px; line-height:1.72; }
+    .chat-welcome-note { display:block; margin-top:8px; color:var(--muted); font-size:10px; }
+
     .conversation { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
     .user-message { max-width:82%; margin:0 0 11px auto; padding:11px 14px; border-radius:18px 18px 5px 18px; background:#3b3531; color:white; font-size:14px; line-height:1.55; }
 
@@ -574,10 +586,15 @@
     .answer-name { font-size:14px; font-weight:700; }
     .answer-note { margin-top:1px; color:var(--muted); font-size:10px; }
 
-    .answer-body { font-size:15px; line-height:1.72; }
+    .answer-body { overflow-wrap:anywhere; font-size:15px; line-height:1.72; }
     .answer-body p { margin:0 0 11px; }
     .answer-body p:last-child { margin-bottom:0; }
     .answer-body strong { font-weight:720; }
+    .answer-bullets { margin:10px 0 12px; padding-left:20px; }
+    .answer-bullets li { margin:7px 0; padding-left:2px; }
+    .answer-steps { margin:10px 0 12px; padding:0; list-style:none; counter-reset:answer-step; }
+    .answer-steps li { display:grid; grid-template-columns:22px 1fr; gap:8px; margin:9px 0; counter-increment:answer-step; }
+    .answer-steps li::before { content:counter(answer-step); width:20px; height:20px; border-radius:50%; background:#edf1e7; color:#60725d; display:grid; place-items:center; font-size:11px; font-weight:700; }
     .answer-list { margin:11px 0; padding:0; list-style:none; }
     .answer-list li { display:grid; grid-template-columns:22px 1fr; gap:7px; margin:9px 0; }
     .answer-list li > span { width:20px; height:20px; border-radius:50%; background:#edf1e7; color:#60725d; display:grid; place-items:center; font-size:11px; font-weight:700; }
@@ -634,8 +651,7 @@
     .color-dot { width:23px; height:23px; border:3px solid rgba(255,255,255,.8); border-radius:50%; box-shadow:0 0 0 1px rgba(91,67,52,.12); }
     .color-dot.shell { background:var(--shell); }
     .color-dot.skin { background:var(--skin); }
-    .color-copy span { display:block; color:var(--muted); font-size:10px; }
-    .color-copy strong { display:block; font-size:12px; }
+    .color-copy strong { display:block; color:#5e5751; font-size:12px; }
     .settings-label { margin:24px 2px 9px; color:var(--muted); font-size:12px; font-weight:700; }
     .settings-card { padding:0 15px; border:1px solid var(--line); border-radius:21px; background:var(--card); }
     .setting-row { width:100%; min-height:58px; padding:0; border:0; border-bottom:1px solid var(--line); background:transparent; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#48423e; text-align:left; cursor:pointer; }
@@ -916,6 +932,15 @@
           </div>
         </header>
 
+        <section class="chat-welcome" id="chatWelcome" aria-live="polite">
+          <div class="chat-welcome-head">
+            <span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/></svg></span>
+            <div><div class="answer-name">Liko</div><div class="answer-note">在这里陪你</div></div>
+          </div>
+          <p class="chat-welcome-copy" id="chatGreeting">你好。校园里的事，或者你今天想聊的，都可以慢慢说。</p>
+          <span class="chat-welcome-note" id="chatGreetingNote">当前只保留本次会话</span>
+        </section>
+
         <section class="hot-section" aria-label="高频问题推荐">
           <div class="section-heading"><strong>最近大家都在问</strong><span>结合近期热度推荐</span></div>
           <div class="hot-grid">
@@ -926,28 +951,19 @@
           </div>
         </section>
 
-        <section class="conversation" id="conversation" aria-label="校园问答">
-          <div class="user-message" id="questionText">丽湖校区图书馆几点关门？</div>
-          <article class="answer-card">
+        <section class="conversation" id="conversation" aria-label="校园问答" hidden>
+          <div class="user-message" id="questionText"></div>
+          <article class="answer-card" id="answerCard">
             <header class="answer-head">
               <span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/></svg></span>
               <div><div class="answer-name">Liko</div><div class="answer-note" id="answerNote">已核对校园资料</div></div>
             </header>
-            <div class="answer-body" id="answerBody">
-              <p><strong>开放时间可能会随教学周和节假日调整。</strong>出发前可以先查看图书馆官网当天的开放安排，临时调整以馆方通知为准。</p>
-              <ul class="answer-list">
-                <li><span>1</span><div>先确认你要去的是丽湖校区图书馆，以及具体楼层或功能区。</div></li>
-                <li><span>2</span><div>节假日、考试周的开放时间可能不同，建议当天再核对一次。</div></li>
-              </ul>
-              <p>告诉我<strong>日期和想去的区域</strong>，接入知识库后我可以继续帮你查得更具体。</p>
-            </div>
-            <footer class="sources" id="answerSources" aria-label="回答来源">
-              <div class="sources-title"><span>参考来源</span><span id="sourceCount">2 条</span></div>
-              <a class="source-link demo-link" href="#"><span class="source-copy"><strong>深圳大学图书馆 · 开放时间</strong><span>lib.szu.edu.cn · 更新于 2026-08-10</span></span><span class="source-arrow">›</span></a>
-              <a class="source-link demo-link" href="#"><span class="source-copy"><strong>深圳大学 · 通知公告</strong><span>szu.edu.cn · 更新于 2026-08-08</span></span><span class="source-arrow">›</span></a>
+            <div class="answer-body" id="answerBody"></div>
+            <footer class="sources is-empty" id="answerSources" aria-label="回答来源">
+              <div class="sources-title"><span>参考来源</span><span id="sourceCount">0 条</span></div>
             </footer>
             <div class="answer-meta">
-              <span class="answer-time" id="answerTime">刚刚 · 内容为 UI 演示</span>
+              <span class="answer-time" id="answerTime"></span>
               <div class="answer-actions" aria-label="回答反馈">
                 <button class="answer-action" type="button" id="copyAnswer" aria-label="复制回答"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
                 <button class="answer-action feedback-up" type="button" aria-label="回答有帮助"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v10H4V10h3ZM7 18h10.3a2 2 0 0 0 2-1.7l.7-5A2 2 0 0 0 18 9h-4l1-3.5A2 2 0 0 0 13.1 3L8 10v8"/></svg></button>
@@ -966,11 +982,11 @@
       <section class="mine-card" aria-label="我的 Liko 身份卡">
         <div class="mine-top">
           <svg class="mine-portrait liko-mini" viewBox="0 0 60 60" role="img" aria-label="我的 Liko"><circle cx="30" cy="31" r="25" fill="var(--shell)"/><circle cx="30" cy="31" r="17" fill="var(--skin)"/><circle cx="24" cy="29" r="2.2" fill="var(--face)"/><circle cx="36" cy="29" r="2.2" fill="var(--face)"/><path d="M25 37q5 4 10 0" fill="none" stroke="var(--face)" stroke-width="2.3" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
-          <div><div class="mine-name" id="mineName">游客</div><span class="serial-pill" data-liko-number>尚未注册</span><div class="mine-desc" id="mineDesc">可以直接问 Liko<br/>注册后生成专属形象与长期记忆</div></div>
+          <div><div class="mine-name" id="mineName">游客</div><span class="serial-pill" data-liko-number>尚未注册</span><div class="mine-desc" id="mineDesc">可以直接问 Liko<br/>注册后生成专属形象，可选择长期记忆</div></div>
         </div>
         <div class="color-row" aria-label="当前配色">
-          <div class="color-item"><span class="color-dot shell"></span><span class="color-copy"><span>外壳</span><strong id="shellColor">注册后随机</strong></span></div>
-          <div class="color-item"><span class="color-dot skin"></span><span class="color-copy"><span>内层</span><strong id="skinColor">注册后随机</strong></span></div>
+          <div class="color-item"><span class="color-dot shell"></span><span class="color-copy"><strong>外壳</strong></span></div>
+          <div class="color-item"><span class="color-dot skin"></span><span class="color-copy"><strong>内壳</strong></span></div>
         </div>
       </section>
       <button class="account-button" type="button" id="accountAction">登录 / 注册</button>
@@ -1048,6 +1064,10 @@
       const answerBody = document.getElementById('answerBody');
       const answerSources = document.getElementById('answerSources');
       const answerTime = document.getElementById('answerTime');
+      const conversation = document.getElementById('conversation');
+      const chatWelcome = document.getElementById('chatWelcome');
+      const chatGreeting = document.getElementById('chatGreeting');
+      const chatGreetingNote = document.getElementById('chatGreetingNote');
       const sendQuestion = document.getElementById('sendQuestion');
       const feedbackUp = document.querySelector('.feedback-up');
       const feedbackDown = document.querySelector('.feedback-down');
@@ -1061,6 +1081,7 @@
       let conversationId = null;
       let authMode = 'login';
       let authState = {authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}};
+      let systemState = {memoryConfigured:false};
 
       const apiRequest = async (path, options = {}) => {
         const response = await fetch(`${API_BASE}${path}`, {
@@ -1098,21 +1119,57 @@
         document.getElementById('mineName').textContent = state.authenticated ? state.user.username : '游客';
         document.getElementById('mineDesc').innerHTML = state.authenticated
           ? `只属于你的校园伴生助手<br>现在 ${companion.ageDays} 天大`
-          : '可以直接问 Liko<br>注册后生成专属形象与长期记忆';
+          : '可以直接问 Liko<br>注册后生成专属形象，可选择长期记忆';
         document.getElementById('profileAge').textContent = companion ? `${companion.ageDays} 天大` : '游客模式';
-        document.getElementById('shellColor').textContent = companion?.palette.shell || '注册后随机';
-        document.getElementById('skinColor').textContent = companion?.palette.skin || '注册后随机';
         document.getElementById('accountAction').hidden = state.authenticated;
         document.getElementById('logoutAction').hidden = !state.authenticated;
-        document.getElementById('memoryConsentSide').textContent = state.authenticated ? (state.user.memoryConsent ? '已开启 ›' : '已关闭 ›') : '登录后开启 ›';
+        document.getElementById('memoryConsentSide').textContent = !state.authenticated
+          ? '登录后开启 ›'
+          : !systemState.memoryConfigured
+            ? '尚未部署 ›'
+            : state.user.memoryConsent ? '已开启 ›' : '已关闭 ›';
         document.querySelector('#changePasswordAction .setting-side').textContent = state.authenticated ? '›' : '登录后可用 ›';
         const quota = state.quota || authState.quota;
         if (quota) document.getElementById('quotaCopy').textContent = `${state.authenticated ? '登录用户' : '游客'}今日剩余 ${quota.remaining} / ${quota.limit} 次`;
         applyPalette(companion?.palette);
       };
 
+      const dayPeriod = () => {
+        const hour = new Date().getHours();
+        if (hour < 6) return '夜深了';
+        if (hour < 11) return '早上好';
+        if (hour < 14) return '中午好';
+        if (hour < 18) return '下午好';
+        return '晚上好';
+      };
+
+      const refreshGreeting = async () => {
+        const period = dayPeriod();
+        if (!authState.authenticated) {
+          chatGreeting.textContent = `${period}。我是 Liko，校园里的事，或者你今天想聊的，都可以慢慢说。`;
+          chatGreetingNote.textContent = '游客模式 · 当前只保留本次会话';
+          return;
+        }
+        const name = authState.user?.username || '你';
+        chatGreeting.textContent = `${period}，${name}。今天想从哪件事开始？`;
+        chatGreetingNote.textContent = systemState.memoryConfigured && authState.user?.memoryConsent ? '长期记忆已开启' : '当前只保留本次会话';
+        if (!systemState.memoryConfigured || !authState.user?.memoryConsent) return;
+        try {
+          const memories = await apiRequest('/api/users/me/memories?limit=1');
+          if (memories.length) chatGreeting.textContent = `${period}，${name}。上次聊到的事我还记得，今天想接着聊，还是换个话题？`;
+        } catch { /* 记忆不可用时保持自然问候，不打断进入聊天 */ }
+      };
+
       const refreshAccount = async () => {
-        try { renderAccount(await apiRequest('/api/auth/me')); }
+        try {
+          const [state, health] = await Promise.all([
+            apiRequest('/api/auth/me'),
+            apiRequest('/api/health').catch(() => null)
+          ]);
+          systemState.memoryConfigured = Boolean(health?.integrations?.memoryConfigured);
+          renderAccount(state);
+          await refreshGreeting();
+        }
         catch { document.getElementById('quotaCopy').textContent = '账号服务暂时不可用，问答仍可尝试使用'; }
       };
 
@@ -1121,7 +1178,7 @@
         document.querySelectorAll('[data-auth-mode]').forEach(button => button.classList.toggle('is-active', button.dataset.authMode === mode));
         const modeCopy = {
           login: {title:'登录 Liko', submit:'登录', password:'密码', hint:'登录后会在不同设备同步你的专属 Liko 和长期记忆。'},
-          register: {title:'注册 Liko', submit:'注册并生成 Liko', password:'密码', hint:'注册后会生成专属形象并开启长期记忆；你可以随时关闭和删除。'},
+          register: {title:'注册 Liko', submit:'注册并生成 Liko', password:'密码', hint:'注册后会生成专属形象；长期记忆由你选择开启，也可以随时关闭和删除。'},
           recover: {title:'用恢复码找回', submit:'重设密码', password:'新密码', hint:'填写注册时保存的恢复码。重设后旧恢复码会失效，并生成一个新的。'}
         }[mode];
         document.getElementById('authTitle').textContent = modeCopy.title;
@@ -1170,6 +1227,7 @@
       });
       document.getElementById('memoryConsentAction').addEventListener('click', async () => {
         if (!authState.authenticated) { openAuth(); return; }
+        if (!systemState.memoryConfigured) { showToast('长期记忆服务尚未部署'); return; }
         const enabled = !authState.user.memoryConsent;
         try {
           const result = await apiRequest('/api/auth/memory-consent', {method:'PATCH', body:JSON.stringify({enabled})});
@@ -1308,7 +1366,7 @@
       };
 
       navButtons.forEach(button => button.addEventListener('click', () => switchPage(button.dataset.target)));
-      document.getElementById('enterChat').addEventListener('click', () => setChatMode(true));
+      document.getElementById('enterChat').addEventListener('click', async () => { setChatMode(true); await refreshGreeting(); });
       document.getElementById('backToLiko').addEventListener('click', () => setChatMode(false));
 
       refreshHourlyState();
@@ -1331,9 +1389,16 @@
 
       const renderSources = (items = []) => {
         clearSources();
+        const seenTitles = new Set();
         const safeItems = items.filter(item => {
-          try { return new URL(item.url).protocol === 'https:'; } catch { return false; }
-        });
+          try {
+            const url = new URL(item.url);
+            const titleKey = (item.title || url.hostname).trim().toLocaleLowerCase('zh-CN');
+            if (url.protocol !== 'https:' || seenTitles.has(titleKey)) return false;
+            seenTitles.add(titleKey);
+            return true;
+          } catch { return false; }
+        }).slice(0, 4);
         document.getElementById('sourceCount').textContent = `${safeItems.length} 条`;
         answerSources.classList.toggle('is-empty', !safeItems.length);
         safeItems.forEach(item => {
@@ -1345,9 +1410,10 @@
           const copy = document.createElement('span');
           copy.className = 'source-copy';
           const title = document.createElement('strong');
-          title.textContent = item.title;
+          const sourceUrl = new URL(item.url);
+          title.textContent = item.title || sourceUrl.hostname;
           const detail = document.createElement('span');
-          detail.textContent = [item.department, item.lastVerifiedAt && `核验于 ${item.lastVerifiedAt}`].filter(Boolean).join(' · ');
+          detail.textContent = [item.department || sourceUrl.hostname.replace(/^www\./,''), item.lastVerifiedAt && `核验于 ${item.lastVerifiedAt}`].filter(Boolean).join(' · ');
           copy.append(title, detail);
           const arrow = document.createElement('span');
           arrow.className = 'source-arrow';
@@ -1355,6 +1421,60 @@
           link.append(copy, arrow);
           answerSources.append(link);
         });
+      };
+
+      const cleanAnswerText = (value = '') => value
+        .replace(/\[[0-9a-f]{16,}(?:[^\]\n]*)?\]?/gi, '')
+        .replace(/\[(?:source|cite|citation):[^\]]+\]/gi, '')
+        .replace(/【引用[^】]*】/g, '')
+        .replace(/[ \t]+\n/g, '\n')
+        .trim();
+
+      const escapeAnswerHtml = (value) => value
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+
+      const formatInlineAnswer = (value) => escapeAnswerHtml(value)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      const renderAnswerText = (value) => {
+        const lines = cleanAnswerText(value).split('\n');
+        const blocks = [];
+        let paragraph = [];
+        let listType = '';
+        let listItems = [];
+        const flushParagraph = () => {
+          if (!paragraph.length) return;
+          blocks.push(`<p>${formatInlineAnswer(paragraph.join(' '))}</p>`);
+          paragraph = [];
+        };
+        const flushList = () => {
+          if (!listItems.length) return;
+          const className = listType === 'ol' ? 'answer-steps' : 'answer-bullets';
+          blocks.push(`<${listType} class="${className}">${listItems.map(item => `<li>${formatInlineAnswer(item)}</li>`).join('')}</${listType}>`);
+          listType = '';
+          listItems = [];
+        };
+        lines.forEach(rawLine => {
+          const line = rawLine.trim();
+          if (!line) { flushParagraph(); flushList(); return; }
+          const bullet = line.match(/^[-*•]\s+(.+)/);
+          const numbered = line.match(/^\d+[.)、]\s*(.+)/);
+          if (bullet || numbered) {
+            flushParagraph();
+            const nextType = numbered ? 'ol' : 'ul';
+            if (listType && listType !== nextType) flushList();
+            listType = nextType;
+            listItems.push((numbered || bullet)[1]);
+            return;
+          }
+          flushList();
+          paragraph.push(line.replace(/^#{1,6}\s*/, ''));
+        });
+        flushParagraph();
+        flushList();
+        answerBody.innerHTML = blocks.join('');
       };
 
       const handleStreamEvent = (eventName, data, answerText) => {
@@ -1369,7 +1489,7 @@
         }
         if (eventName === 'delta') {
           answerText.value += data.text || '';
-          answerBody.textContent = answerText.value;
+          renderAnswerText(answerText.value);
         }
         if (eventName === 'sources') renderSources(data.items);
         if (eventName === 'done') {
@@ -1426,10 +1546,12 @@
         activeRequest?.abort();
         const requestController = new AbortController();
         activeRequest = requestController;
+        chatWelcome.hidden = true;
+        conversation.hidden = false;
         document.getElementById('questionText').textContent = question;
         document.getElementById('questionInput').value = '';
         document.getElementById('answerNote').textContent = '正在连接校园知识库…';
-        answerBody.textContent = '';
+        answerBody.innerHTML = '';
         answerTime.textContent = '正在回答…';
         currentAnswerId = null;
         clearSources();
