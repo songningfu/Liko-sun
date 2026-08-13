@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liko 管理后台登录</title>
+<style>
+  :root { --bg:#faf7f4; --panel:#fff; --line:#ece4dd; --text:#3d3330; --muted:#8f817a; --accent:#d94f3d; --soft:#fdeee9; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at 20% 15%,#fff5ee 0,transparent 34%),var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  main { width:min(420px,100%); background:var(--panel); border:1px solid var(--line); border-radius:22px; padding:32px; box-shadow:0 18px 60px rgba(83,56,45,.09); }
+  .logo { width:58px; height:58px; display:grid; place-items:center; border-radius:18px; background:var(--soft); font-size:30px; }
+  h1 { margin:18px 0 8px; font-size:25px; }
+  p { color:var(--muted); line-height:1.7; margin:0 0 24px; }
+  label { display:block; margin:14px 0 6px; font-size:13px; color:var(--muted); }
+  input { width:100%; border:1px solid var(--line); border-radius:11px; padding:12px 13px; font:inherit; }
+  input:focus { outline:3px solid var(--soft); border-color:var(--accent); }
+  button { width:100%; margin-top:20px; border:0; border-radius:11px; padding:12px; color:#fff; background:var(--accent); font:inherit; font-weight:650; cursor:pointer; }
+  button:disabled { opacity:.55; }
+  #message { min-height:22px; margin-top:13px; color:var(--accent); font-size:13px; }
+  .notice { margin-top:20px; padding:12px; border-radius:11px; background:#f8f3ef; font-size:12px; color:var(--muted); line-height:1.6; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">🍒</div>
+  <h1>Liko 管理后台</h1>
+  <p>登录后可查看 Liko 运行状态、管理校园资料，并发布知识库与表达规则。</p>
+  <form id="login-form">
+    <label for="username">管理员账号</label>
+    <input id="username" autocomplete="username" required>
+    <label for="password">管理员密码</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button id="submit" type="submit">登录后台</button>
+    <div id="message" role="alert"></div>
+  </form>
+  <div class="notice">这是内部管理入口。不要把账号密码发给他人，也不要在公共设备上保存密码。</div>
+</main>
+<script>
+const prefix = location.pathname.startsWith("/admin") ? "/admin" : "";
+const url = path => `${prefix}${path}`;
+fetch(url("/api/admin/session"), {credentials:"same-origin"}).then(r => { if (r.ok) location.replace(prefix + "/"); });
+document.getElementById("login-form").onsubmit = async event => {
+  event.preventDefault();
+  const button = document.getElementById("submit");
+  const message = document.getElementById("message");
+  button.disabled = true; message.textContent = "正在登录…";
+  try {
+    const response = await fetch(url("/api/admin/login"), {
+      method:"POST", headers:{"Content-Type":"application/json"}, credentials:"same-origin",
+      body:JSON.stringify({username:document.getElementById("username").value,password:document.getElementById("password").value})
+    });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.detail || "登录失败");
+    location.replace(prefix + "/");
+  } catch (error) { message.textContent = error.message; button.disabled = false; }
+};
+</script>
+</body>
+</html>

@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, inspect, select, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, func, inspect, select, text
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -155,6 +155,43 @@ class Database:
                 )
             )
             return int(value or 0)
+
+    def admin_summary(self, *, period_key: str, registered_since: datetime) -> dict[str, int]:
+        """Return aggregate operations metrics without exposing account records."""
+
+        with self.session() as db:
+            return {
+                "registeredUsers": int(db.scalar(select(func.count()).select_from(User)) or 0),
+                "registeredToday": int(
+                    db.scalar(
+                        select(func.count()).select_from(User).where(User.created_at >= registered_since)
+                    )
+                    or 0
+                ),
+                "memoryConsentUsers": int(
+                    db.scalar(
+                        select(func.count()).select_from(User).where(User.memory_consent.is_(True))
+                    )
+                    or 0
+                ),
+                "activeSessions": int(
+                    db.scalar(
+                        select(func.count())
+                        .select_from(LoginSession)
+                        .where(LoginSession.expires_at > utc_now())
+                    )
+                    or 0
+                ),
+                "chatRequestsToday": int(
+                    db.scalar(
+                        select(func.coalesce(func.sum(UsageCounter.count), 0)).where(
+                            UsageCounter.kind == "chat",
+                            UsageCounter.period_key == period_key,
+                        )
+                    )
+                    or 0
+                ),
+            }
 
 
 @lru_cache(maxsize=8)

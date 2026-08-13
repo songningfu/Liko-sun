@@ -7,15 +7,19 @@ from __future__ import annotations
 import asyncio
 import json
 import queue
+import secrets
 import threading
+import time
 from pathlib import Path
 
+import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from core import internal_fetch, settings
+from core.admin_auth import AdminConfig, AdminSessionManager, SESSION_SECONDS
 from core.crawler import STATE_FILE as CRAWL_STATE_FILE, add_site, load_sites
 from core.enrichment import KnowledgeEnricher
 from core.fastgpt_sync import FastGPTSync
@@ -35,6 +39,9 @@ manual_store = ManualSubmissionStore()
 enricher = KnowledgeEnricher()
 fastgpt_sync = FastGPTSync()
 liko_style = LikoStyleStore()
+admin_config = AdminConfig.from_env()
+admin_sessions = AdminSessionManager(admin_config)
+_login_attempts: dict[str, list[float]] = {}
 
 # 流水线运行状态：同一时间只允许一个任务
 _run_lock = threading.Lock()
@@ -177,6 +184,39 @@ class StylePatch(BaseModel):
     banned_phrases: str | None = None
 
 
+class AdminLoginIn(BaseModel):
+    username: str
+    password: str
+
+
+def _login_allowed(client: str) -> bool:
+    now = time.monotonic()
+    attempts = [value for value in _login_attempts.get(client, []) if now - value < 300]
+    _login_attempts[client] = attempts
+    return len(attempts) < 5
+
+
+@app.middleware("http")
+async def protect_admin_api(request: Request, call_next):
+    path = request.url.path
+    public_paths = {"/api/admin/login", "/api/admin/session", "/healthz"}
+    if path.startswith("/api/") and path not in public_paths:
+        payload = admin_sessions.read(request.cookies.get(admin_sessions.cookie_name))
+        if not payload:
+            return JSONResponse(status_code=401, content={"detail": "请先登录管理后台。"})
+        if request.method not in {"GET", "HEAD", "OPTIONS"}:
+            supplied_csrf = request.headers.get("x-admin-csrf", "")
+            if not supplied_csrf or not secrets.compare_digest(supplied_csrf, payload["csrf"]):
+                return JSONResponse(status_code=403, content={"detail": "管理会话校验失败，请刷新页面后重试。"})
+
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def _processed_source(source_id: str) -> dict:
     page = PAGES_ROOT / f"{source_id}.md"
     if not page.exists():
@@ -202,6 +242,75 @@ def _sync_chunks(doc: dict) -> list[str]:
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     return (STATIC_ROOT / "index.html").read_text(encoding="utf-8")
+
+
+@app.get("/login", response_class=HTMLResponse)
+def admin_login_page() -> str:
+    return (STATIC_ROOT / "login.html").read_text(encoding="utf-8")
+
+
+@app.get("/healthz")
+def factory_health() -> dict:
+    return {"status": "ok", "adminConfigured": admin_config.configured}
+
+
+@app.post("/api/admin/login")
+def admin_login(payload: AdminLoginIn, request: Request, response: Response) -> dict:
+    if not admin_config.configured:
+        raise HTTPException(status_code=503, detail="管理后台尚未配置管理员凭据。")
+    client = request.client.host if request.client else "unknown"
+    if not _login_allowed(client):
+        raise HTTPException(status_code=429, detail="登录尝试过多，请 5 分钟后再试。")
+    if not admin_sessions.authenticate(payload.username.strip(), payload.password):
+        _login_attempts.setdefault(client, []).append(time.monotonic())
+        raise HTTPException(status_code=401, detail="管理员账号或密码不正确。")
+    _login_attempts.pop(client, None)
+    token, csrf = admin_sessions.issue()
+    response.set_cookie(
+        admin_sessions.cookie_name,
+        token,
+        max_age=SESSION_SECONDS,
+        httponly=True,
+        secure=admin_config.cookie_secure,
+        samesite="strict",
+        path=admin_config.cookie_path,
+    )
+    return {"authenticated": True, "username": admin_config.username, "csrfToken": csrf}
+
+
+@app.get("/api/admin/session")
+def admin_session(request: Request) -> dict:
+    payload = admin_sessions.read(request.cookies.get(admin_sessions.cookie_name))
+    if not payload:
+        raise HTTPException(status_code=401, detail="管理会话已失效。")
+    return {
+        "authenticated": True,
+        "username": admin_config.username,
+        "csrfToken": payload["csrf"],
+    }
+
+
+@app.post("/api/admin/logout", status_code=204)
+def admin_logout(response: Response) -> None:
+    response.delete_cookie(admin_sessions.cookie_name, path=admin_config.cookie_path)
+
+
+@app.get("/api/liko/summary")
+async def liko_admin_summary() -> dict:
+    if not admin_config.liko_admin_token:
+        return {"status": "unconfigured", "message": "Liko 管理统计令牌尚未配置。"}
+    try:
+        async with httpx.AsyncClient(timeout=5) as client:
+            response = await client.get(
+                f"{admin_config.liko_api_base_url}/api/admin/summary",
+                headers={"Authorization": f"Bearer {admin_config.liko_admin_token}"},
+            )
+            response.raise_for_status()
+            result = response.json()
+    except (httpx.HTTPError, ValueError):
+        return {"status": "unavailable", "message": "暂时无法读取 Liko 业务后端。"}
+    result["fastgptAdminUrl"] = admin_config.fastgpt_admin_url
+    return result
 
 
 @app.get("/api/overview")

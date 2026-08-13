@@ -11,7 +11,7 @@ cd 知识工厂
 ./.venv/bin/python server.py
 ```
 
-浏览器访问 `http://127.0.0.1:8020`。首次使用如果没有 `.venv`：
+浏览器访问 `http://127.0.0.1:8020`。部署后由 Nginx 通过 `/admin/` 提供统一管理入口，所有知识工厂 API 都需要管理员会话。首次使用如果没有 `.venv`：
 
 ```bash
 python3 -m venv .venv
@@ -20,6 +20,17 @@ python3 -m venv .venv
 ```
 
 如需启用模型加工和 FastGPT 增量同步，复制 `.env.example` 为 `.env` 后在服务器端填写。真实密钥不得填写在网页、H5、日志或 Git 中。
+
+## 管理员登录
+
+统一后台使用独立管理员账号，不复用普通 Liko 用户账号。密码只保存 PBKDF2-SHA256 摘要；会话 8 小时有效，修改数据的请求还会校验页面令牌。生成密码摘要：
+
+```bash
+cd 知识工厂
+./.venv/bin/python -m core.admin_auth
+```
+
+将输出的摘要写入 `FACTORY_ADMIN_PASSWORD_HASH`，并分别为 `FACTORY_SESSION_SECRET`、`LIKO_ADMIN_API_TOKEN` 生成高强度随机值。后一个值需要与 Liko 后端的 `ADMIN_API_TOKEN` 一致，只用于读取汇总统计。测试 IP 仍是 HTTP，管理员页面仅供临时验收；正式使用前必须绑定域名并启用 HTTPS，再把 `FACTORY_COOKIE_SECURE` 改为 `true`。
 
 ## 功能
 
@@ -34,6 +45,7 @@ python3 -m venv .venv
 | 导出 | 每次运行自动生成 FastGPT zip，按主题合并；`官方来源/` 与 `非官方待核验/` 分目录 |
 | FastGPT 同步 | 每篇资料独立版本。新版本先禁用暂存，等待向量训练完成并人工发布；切换失败自动恢复，旧版本可回滚 |
 | Liko 表达 | 可修改语气、长度、段落和习惯用语，支持草稿、发布和回滚；身份、事实依据、不编造等规则不可关闭 |
+| Liko 概览 | 只展示注册用户数、今日新增、有效会话、今日问答数与集成状态；不展示密码、API Key、用户名列表或对话正文 |
 
 表达优先级固定为：身份/事实/安全规则 → 用户本次明确要求 → 该用户长期记忆中的偏好 → Liko 全局表达习惯。长期记忆只做个性化，不会改写校园事实；旧偏好与本次要求冲突时，以本次要求为准。
 

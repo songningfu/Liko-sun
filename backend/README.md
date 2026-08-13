@@ -5,6 +5,7 @@
 ## 当前接口
 
 - `GET /api/health`：服务状态，以及 FastGPT、数据库是否已配置；不会返回密钥内容。
+- `GET /api/admin/summary`：使用后端共享管理令牌读取用户数、有效会话数、今日问答数和集成状态；仅供知识工厂统一后台调用，不返回账号明细或对话正文。
 - `GET /api/auth/me`：读取服务端会话、专属 Liko 与当日剩余额度；游客首次访问时设置匿名 HttpOnly Cookie。
 - `POST /api/auth/register`：账号密码注册，按顺序生成 Liko 编号与全 sRGB 双层随机配色，并只在本次响应展示恢复码。
 - `POST /api/auth/login`、`POST /api/auth/logout`：登录与退出。
@@ -56,6 +57,8 @@ FastGPT 需要同时配置 `FASTGPT_BASE_URL`、`FASTGPT_API_KEY` 和 `FASTGPT_A
 FastGPT 管理后台中的应用配置分为调试草稿和 API 使用的已发布版本。修改角色提示词、知识库或检索参数后，必须点击 **保存 → 保存并发布**，并在版本弹窗中再次点击 **确认**；只显示“已保存”并不代表手机端 API 已更新。发布后至少验证“你是谁？”和一个应命中知识库的校园问题，确认身份为 Liko、运行链路包含知识库搜索且返回官方来源。
 
 账号服务需同时配置 `DATABASE_URL` 和至少 32 字符的随机 `SESSION_SECRET`。生产数据库使用 PostgreSQL，例如 `postgresql://...`；首次连接会自动创建当前版本所需表。密码使用 Argon2id 摘要，会话令牌和恢复码只保存不可逆摘要。默认会话 30 天、游客每天 10 次、登录用户每天 50 次，均可通过环境变量调整。生产环境 Cookie 自动启用 `Secure`、`HttpOnly` 与 `SameSite=Lax`。
+
+统一管理后台还需要在后端设置 `ADMIN_API_TOKEN`，并在知识工厂设置相同的 `LIKO_ADMIN_API_TOKEN`。该令牌只允许读取聚合统计，不能读取或修改具体账号；不得放进浏览器或 Git。
 
 长期记忆默认关闭。只有 `MEMORY_ENABLED=true` 且 Mem0 的模型、向量模型和独立 PostgreSQL 配置完整时，健康检查才会返回 `memoryConfigured: true`。当前采用：
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Liko 知识工厂</title>
+<title>Liko 管理后台</title>
 <style>
   :root {
     --bg: #faf7f4; --panel: #ffffff; --line: #ece4dd;
@@ -17,6 +17,7 @@
   header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
   header h1 { font-size: 18px; font-weight: 700; }
   header .badge { background: var(--accent-soft); color: var(--accent); font-size: 12px; padding: 2px 10px; border-radius: 999px; }
+  header .account { display:flex; align-items:center; gap:8px; margin-left:8px; white-space:nowrap; }
   nav { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; }
   nav button { border: none; background: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--muted); }
   nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
@@ -59,6 +60,11 @@
   .field-label { display: block; color: var(--muted); font-size: 12px; margin: 8px 0 5px; }
   .code-preview { white-space: pre-wrap; background: #2b2422; color: #eee4df; border-radius: 10px; padding: 14px; max-height: 360px; overflow: auto; font-size: 12px; }
   .status-box { padding: 12px; background: #f7f2ee; border-radius: 10px; line-height: 1.8; }
+  .service-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:10px; }
+  .service { border:1px solid var(--line); border-radius:10px; padding:13px; }
+  .service strong { display:block; margin-bottom:7px; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:var(--muted); }
+  .dot.ok { background:var(--ok); } .dot.warn { background:var(--warn); }
   @media (max-width: 760px) {
     header { align-items: flex-start; flex-wrap: wrap; padding: 12px; }
     nav { width: 100%; margin-left: 0; }
@@ -71,10 +77,10 @@
 </head>
 <body>
 <header>
-  <h1>🍒 Liko 知识工厂</h1>
-  <span class="badge">本地运行 · 数据不出本机</span>
+  <h1>🍒 Liko 管理后台</h1>
+  <span class="badge">内部管理</span>
   <nav>
-    <button data-page="dashboard" class="active">概览</button>
+    <button data-page="dashboard" class="active">Liko 概览</button>
     <button data-page="sources">来源管理</button>
     <button data-page="inbox">资料收件箱</button>
     <button data-page="run">运行任务</button>
@@ -83,12 +89,21 @@
     <button data-page="exports">导出</button>
     <button data-page="settings">设置</button>
   </nav>
+  <div class="account"><span class="muted" id="admin-name"></span><button class="btn small ghost" onclick="logoutAdmin()">退出</button></div>
 </header>
 
 <main>
   <!-- 概览 -->
   <section class="page active" id="page-dashboard">
-    <div class="cards" id="stat-cards"></div>
+    <div class="panel">
+      <h2>Liko 运行状态</h2>
+      <div class="cards" id="liko-stat-cards"></div>
+      <div class="service-grid" id="liko-services"><div class="muted">正在读取服务状态…</div></div>
+    </div>
+    <div class="panel">
+      <h2>知识工厂概览</h2>
+      <div class="cards" id="stat-cards"></div>
+    </div>
     <div class="panel">
       <h2>最近流水线事件</h2>
       <div id="recent-events" class="muted">暂无运行记录</div>
@@ -311,6 +326,9 @@
 
 <script>
 const $ = id => document.getElementById(id);
+const ADMIN_PREFIX = location.pathname.startsWith("/admin") ? "/admin" : "";
+const adminUrl = path => `${ADMIN_PREFIX}${path.startsWith("/") ? path : `/${path}`}`;
+let adminSession = null;
 const TYPE_LABEL = { official: "官网公网", internal: "内网", wechat: "公众号" };
 const TRUST_LABEL = { authoritative: "官方权威", institutional: "校内机构", provided: "他人提供", community: "社区线索" };
 const esc = value => String(value ?? "").replace(/[&<>'\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"}[c]));
@@ -333,7 +351,17 @@ document.querySelectorAll("nav button").forEach(btn => {
 });
 
 async function api(path, options) {
-  const resp = await fetch(path, options);
+  const requestOptions = {...(options || {}), credentials:"same-origin"};
+  const method = (requestOptions.method || "GET").toUpperCase();
+  requestOptions.headers = {...(requestOptions.headers || {})};
+  if (!["GET", "HEAD", "OPTIONS"].includes(method) && adminSession?.csrfToken) {
+    requestOptions.headers["X-Admin-CSRF"] = adminSession.csrfToken;
+  }
+  const resp = await fetch(adminUrl(path), requestOptions);
+  if (resp.status === 401) {
+    location.replace(adminUrl("/login"));
+    throw new Error("管理会话已失效");
+  }
   if (!resp.ok && resp.status !== 204) {
     const body = await resp.json().catch(() => ({}));
     throw new Error(body.detail || `HTTP ${resp.status}`);
@@ -342,7 +370,7 @@ async function api(path, options) {
 }
 
 async function loadOverview() {
-  const data = await api("/api/overview");
+  const [data, liko] = await Promise.all([api("/api/overview"), api("/api/liko/summary")]);
   const s = data.sources;
   $("stat-cards").innerHTML = [
     [data.crawl.total_crawled, "全站已抓页面"], [data.crawl.queue_left, "待爬队列"],
@@ -355,6 +383,33 @@ async function loadOverview() {
     `<p>最近导出包：${data.last_export || "暂无"}</p>` +
     `<p>内网会话：${internal.has_session ? "已保存" : "未登录"}　全站搜查：${crawlLabel} ${data.settings.crawl_schedule === "off" ? "" : data.settings.crawl_time}</p>` +
     `<p>流水线状态：${data.running ? "运行中" : "空闲"}</p>`;
+  renderLikoSummary(liko);
+}
+
+function renderLikoSummary(data) {
+  if (data.status !== "ok") {
+    $("liko-stat-cards").innerHTML = "";
+    $("liko-services").innerHTML = `<div class="service"><strong><span class="dot warn"></span>Liko 业务后端</strong><span class="muted">${esc(data.message || "暂时不可用")}</span></div>`;
+    return;
+  }
+  const counts = data.counts || {};
+  $("liko-stat-cards").innerHTML = [
+    [counts.registeredUsers || 0, "注册用户"], [counts.registeredToday || 0, "今日新增"],
+    [counts.activeSessions || 0, "有效登录会话"], [counts.chatRequestsToday || 0, "今日问答"],
+    [counts.memoryConsentUsers || 0, "同意长期记忆"],
+  ].map(([n,l]) => `<div class="card"><div class="num">${n}</div><div class="label">${l}</div></div>`).join("");
+  const integrations = data.integrations || {};
+  const service = (name, ok, text) => `<div class="service"><strong><span class="dot ${ok ? "ok" : "warn"}"></span>${name}</strong><span class="muted">${text}</span></div>`;
+  $("liko-services").innerHTML = [
+    service("Liko API", true, `${esc(data.version || "")} · 正常运行`),
+    service("账号数据库", integrations.databaseConfigured, integrations.databaseConfigured ? "已连接" : "未配置"),
+    service("FastGPT 问答", integrations.fastgptConfigured, integrations.fastgptConfigured ? "已连接" : "未配置"),
+    service("长期记忆", integrations.memoryConfigured, integrations.memoryConfigured ? "已启用" : "组件已安装，尚未启用"),
+  ].join("") + (data.fastgptAdminUrl ? `<div class="service"><strong>AI 配置</strong><a href="${esc(data.fastgptAdminUrl)}" target="_blank" rel="noreferrer">打开 FastGPT 管理后台</a></div>` : "");
+}
+
+async function logoutAdmin() {
+  try { await api("/api/admin/logout", {method:"POST"}); } finally { location.replace(adminUrl("/login")); }
 }
 
 async function loadSources() {
@@ -454,7 +509,7 @@ async function runPipeline() {
 
 function watchEvents(onDone) {
   if (eventSource) eventSource.close();
-  eventSource = new EventSource("/api/pipeline/events");
+  eventSource = new EventSource(adminUrl("/api/pipeline/events"));
   eventSource.onmessage = msg => {
     const e = JSON.parse(msg.data);
     appendLog(e);
@@ -492,7 +547,7 @@ async function loadExports() {
   $("export-empty").style.display = list.length ? "none" : "block";
   $("export-rows").innerHTML = list.map(x => `<tr>
     <td>${x.name}</td><td class="muted">${(x.size / 1024).toFixed(1)} KB</td>
-    <td><a href="/api/exports/${x.name}" download>下载</a></td></tr>`).join("");
+    <td><a href="${adminUrl(`/api/exports/${x.name}`)}" download>下载</a></td></tr>`).join("");
 }
 
 async function loadSettings() {
@@ -639,7 +694,16 @@ async function rollbackStyle() {
   catch (e) { $("style-msg").textContent = e.message; }
 }
 
-loadOverview();
+async function startAdmin() {
+  try {
+    adminSession = await api("/api/admin/session");
+    $("admin-name").textContent = adminSession.username;
+    await loadOverview();
+  } catch (error) {
+    if (!location.pathname.endsWith("/login")) location.replace(adminUrl("/login"));
+  }
+}
+startAdmin();
 </script>
 </body>
 </html>

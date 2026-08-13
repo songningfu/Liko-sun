@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     session_days: int = Field(default=30, ge=1, le=90)
     guest_daily_limit: int = Field(default=10, ge=1, le=1000)
     user_daily_limit: int = Field(default=50, ge=1, le=10000)
+    admin_api_token: str | None = Field(default=None, repr=False)
 
     memory_enabled: bool = False
     mem0_llm_provider: str = "openai"

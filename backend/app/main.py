@@ -1,4 +1,6 @@
 from collections.abc import AsyncIterable
+from datetime import UTC, datetime, timedelta, timezone
+import secrets
 from typing import Annotated
 from uuid import uuid4
 
@@ -10,6 +12,7 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from .auth import CurrentUser, get_current_user
 from .auth_routes import auth_payload, router as auth_router
 from .config import Settings, get_settings
+from .database import Database, get_database
 from .fastgpt import FastGPTClient, FastGPTUpstreamError
 from .memory import (
     LongTermMemoryStore,
@@ -68,6 +71,49 @@ async def health(config: Annotated[Settings, Depends(get_settings)]) -> dict:
             "authConfigured": config.auth_configured,
             "memoryConfigured": config.memory_configured,
         },
+    }
+
+
+@app.get("/api/admin/summary")
+async def admin_summary(
+    request: Request,
+    config: Annotated[Settings, Depends(get_settings)],
+    database: Annotated[Database | None, Depends(get_database)],
+) -> dict:
+    """Expose aggregate Liko operations metrics to the local admin gateway only."""
+
+    expected = config.admin_api_token or ""
+    supplied = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
+    if not expected or not supplied or not secrets.compare_digest(supplied, expected):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="无权访问管理统计。")
+
+    china_tz = timezone(timedelta(hours=8), name="Asia/Shanghai")
+    now_china = datetime.now(china_tz)
+    midnight_china = now_china.replace(hour=0, minute=0, second=0, microsecond=0)
+    registered_since = midnight_china.astimezone(UTC).replace(tzinfo=None)
+    counts = (
+        database.admin_summary(period_key=now_china.date().isoformat(), registered_since=registered_since)
+        if database
+        else {
+            "registeredUsers": 0,
+            "registeredToday": 0,
+            "memoryConsentUsers": 0,
+            "activeSessions": 0,
+            "chatRequestsToday": 0,
+        }
+    )
+    return {
+        "status": "ok",
+        "service": config.app_name,
+        "version": config.app_version,
+        "environment": config.environment,
+        "integrations": {
+            "fastgptConfigured": config.fastgpt_configured,
+            "databaseConfigured": config.database_configured,
+            "authConfigured": config.auth_configured,
+            "memoryConfigured": config.memory_configured,
+        },
+        "counts": counts,
     }
 
 
