@@ -31,6 +31,7 @@ SITES_FILE = FACTORY_ROOT.parent / "知识库" / "采集器" / "sites.json"
 DATA_ROOT = FACTORY_ROOT / "data"
 STATE_FILE = DATA_ROOT / "crawl_state.json"
 DOCUMENTS_LOG = DATA_ROOT / "crawl_documents.jsonl"
+CUSTOM_SITES_FILE = DATA_ROOT / "custom_sites.json"
 
 ALLOWED_ROOT = "szu.edu.cn"
 RECHECK_DAYS = 30  # 已抓页面超过该天数后才重新检查内容是否变化
@@ -56,7 +57,43 @@ def _event(step: str, message: str, **extra) -> Event:
 
 
 def load_sites() -> list[dict]:
-    return json.loads(SITES_FILE.read_text(encoding="utf-8"))
+    built_in = json.loads(SITES_FILE.read_text(encoding="utf-8"))
+    if not CUSTOM_SITES_FILE.exists():
+        return built_in
+    try:
+        custom = json.loads(CUSTOM_SITES_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        custom = []
+    known = {site["seed_url"].rstrip("/") for site in built_in}
+    return built_in + [site for site in custom if site.get("seed_url", "").rstrip("/") not in known]
+
+
+def add_site(*, name: str, seed_url: str, category: str = "其他校务") -> dict:
+    """增加全站搜查种子；只允许深大 HTTPS 公网站点。"""
+    parsed = urlparse(seed_url.strip())
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or not (host == ALLOWED_ROOT or host.endswith(f".{ALLOWED_ROOT}")):
+        raise ValueError("站点种子必须是 https://*.szu.edu.cn 官方地址")
+    normalized = urlunparse(("https", parsed.netloc.lower(), parsed.path or "/", "", "", ""))
+    if any(site["seed_url"].rstrip("/") == normalized.rstrip("/") for site in load_sites()):
+        raise ValueError("这个站点种子已经存在")
+    try:
+        current = json.loads(CUSTOM_SITES_FILE.read_text(encoding="utf-8")) if CUSTOM_SITES_FILE.exists() else []
+    except (json.JSONDecodeError, OSError):
+        current = []
+    next_number = max([int(str(s.get("site_id", "CUSTOM-0")).split("-")[-1]) for s in current] or [0]) + 1
+    site = {
+        "site_id": f"CUSTOM-{next_number:03d}",
+        "name": name.strip() or host,
+        "seed_url": normalized,
+        "category": category.strip() or "其他校务",
+    }
+    current.append(site)
+    CUSTOM_SITES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = CUSTOM_SITES_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(CUSTOM_SITES_FILE)
+    return site
 
 
 def _load_state() -> dict:

@@ -74,6 +74,7 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
         doc.freshness, doc.latest_year = rag.assess_freshness(doc.title, doc.clean_body)
         doc.content_hash = rag.canonical_hash(doc.clean_body)
         is_official = meta.get("official", "true") == "true"
+        trust_level = meta.get("trust_level", "authoritative" if is_official else "community")
 
         doc_id = f"FAC-{index:05d}"
         result = {
@@ -82,6 +83,7 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
             "title": doc.title,
             "url": doc.url,
             "official": is_official,
+            "trust_level": trust_level,
             "topic": doc.topic,
             "campus": doc.campus,
             "audience": doc.audience,
@@ -123,6 +125,7 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
                 f"title: {doc.title}",
                 f"url: {doc.url}",
                 f"official: {'true' if is_official else 'false'}",
+                f"trust_level: {trust_level}",
                 f"topic: {doc.topic}",
                 f"campus: {doc.campus}",
                 f"audience: {doc.audience}",

@@ -17,7 +17,7 @@
   header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 10; }
   header h1 { font-size: 18px; font-weight: 700; }
   header .badge { background: var(--accent-soft); color: var(--accent); font-size: 12px; padding: 2px 10px; border-radius: 999px; }
-  nav { display: flex; gap: 4px; margin-left: auto; }
+  nav { display: flex; gap: 4px; margin-left: auto; overflow-x: auto; }
   nav button { border: none; background: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--muted); }
   nav button.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
   main { max-width: 1080px; margin: 24px auto; padding: 0 20px; }
@@ -56,6 +56,17 @@
   a { color: var(--accent); }
   .switch { display: flex; align-items: center; gap: 8px; }
   details { margin-top: 6px; } summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  .field-label { display: block; color: var(--muted); font-size: 12px; margin: 8px 0 5px; }
+  .code-preview { white-space: pre-wrap; background: #2b2422; color: #eee4df; border-radius: 10px; padding: 14px; max-height: 360px; overflow: auto; font-size: 12px; }
+  .status-box { padding: 12px; background: #f7f2ee; border-radius: 10px; line-height: 1.8; }
+  @media (max-width: 760px) {
+    header { align-items: flex-start; flex-wrap: wrap; padding: 12px; }
+    nav { width: 100%; margin-left: 0; }
+    nav button { padding: 7px 10px; white-space: nowrap; }
+    main { padding: 0 10px; margin-top: 14px; }
+    .form-grid, .form-grid-2 { grid-template-columns: 1fr; }
+    .panel { padding: 14px; overflow-x: auto; }
+  }
 </style>
 </head>
 <body>
@@ -65,7 +76,10 @@
   <nav>
     <button data-page="dashboard" class="active">概览</button>
     <button data-page="sources">来源管理</button>
+    <button data-page="inbox">资料收件箱</button>
     <button data-page="run">运行任务</button>
+    <button data-page="sync">FastGPT 同步</button>
+    <button data-page="style">Liko 表达</button>
     <button data-page="exports">导出</button>
     <button data-page="settings">设置</button>
   </nav>
@@ -126,13 +140,55 @@
       </tr></thead><tbody id="source-rows"></tbody></table>
       <div class="empty" id="source-empty" style="display:none">还没有来源，先在上方添加</div>
     </div>
+    <div class="panel">
+      <h2>全站搜查种子</h2>
+      <p class="muted" style="margin-bottom:10px">内置站点之外，可以继续添加深大官方子站。爬虫会从每个种子自动发现同站页面。</p>
+      <div class="form-grid">
+        <input id="site-url" placeholder="https://某部门.szu.edu.cn/">
+        <input id="site-name" placeholder="站点名称">
+        <input id="site-category" placeholder="分类，如：教务通知">
+      </div>
+      <button class="btn ghost" onclick="addCrawlSite()">添加站点种子</button>
+      <span class="muted" id="site-msg"></span>
+      <div id="site-list" class="muted" style="margin-top:12px"></div>
+    </div>
+  </section>
+
+  <!-- 人工文字资料 -->
+  <section class="page" id="page-inbox">
+    <div class="panel">
+      <h2>粘贴文字资料</h2>
+      <p class="muted">聊天记录、通知原文、线下文件摘录都可以提交。系统保留原文，大模型只生成辅助标签，不会改写事实。</p>
+      <div class="form-grid" style="margin-top:10px">
+        <input id="manual-title" placeholder="资料标题">
+        <input id="manual-source" placeholder="来源名称，如：辅导员通知">
+        <select id="manual-trust">
+          <option value="provided">他人提供（需审核）</option>
+          <option value="institutional">校内机构资料</option>
+          <option value="authoritative">官方权威（必须有官网链接）</option>
+          <option value="community">社区线索（需核验）</option>
+        </select>
+      </div>
+      <div class="form-grid-2">
+        <input id="manual-url" placeholder="原文链接（没有可留空）">
+        <input id="manual-dept" placeholder="发布部门">
+        <input id="manual-category" placeholder="分类">
+      </div>
+      <textarea id="manual-body" rows="10" placeholder="在这里粘贴完整原文……"></textarea>
+      <div style="margin-top:10px"><button class="btn" onclick="submitManual()">保存到收件箱</button> <span class="muted" id="manual-msg"></span></div>
+    </div>
+    <div class="panel">
+      <h2>待处理资料</h2>
+      <div id="manual-list"></div>
+      <div class="empty" id="manual-empty" style="display:none">暂无人工资料</div>
+    </div>
   </section>
 
   <!-- 运行任务 -->
   <section class="page" id="page-run">
     <div class="panel">
       <h2>全站大搜查（推荐主用）</h2>
-      <p class="muted" style="margin-bottom:10px">从 12 个深大官方站点种子自动发现页面，部门/分类/主题全部自动推断，不用填任何信息。中断后再点自动续跑；已抓页面超过 30 天才会重新检查变更。</p>
+      <p class="muted" style="margin-bottom:10px">从全部已配置的深大官方站点种子自动发现页面，部门/分类/主题全部自动推断。中断后再点自动续跑；已抓页面超过 30 天才会重新检查变更。</p>
       <div class="row">
         <button class="btn" id="crawl-btn" onclick="runCrawl()">🔍 开始全站搜查</button>
         <span class="muted" id="crawl-stats"></span>
@@ -147,6 +203,47 @@
       <div class="row"><span class="muted" id="run-status">空闲</span></div>
     </div>
     <div class="panel"><h2>实时日志</h2><div id="log"></div></div>
+  </section>
+
+  <!-- FastGPT 同步 -->
+  <section class="page" id="page-sync">
+    <div class="panel">
+      <h2>连接状态</h2>
+      <div id="integration-status" class="status-box">读取中…</div>
+      <p class="muted" style="margin-top:8px">密钥只从服务器的 .env 读取，后台网页不显示也不保存密钥。</p>
+    </div>
+    <div class="panel">
+      <h2>暂存一个资料版本</h2>
+      <p class="muted" style="margin-bottom:10px">填写资料编号（例如 SRC-0001、TXT-00001 或 CRAWL-…）。新版本先禁用，不会立即被 Liko 检索。</p>
+      <div class="row"><input id="sync-source-id" style="max-width:360px" placeholder="资料编号"><button class="btn" onclick="stageSync()">暂存到 FastGPT</button><span class="muted" id="sync-msg"></span></div>
+    </div>
+    <div class="panel">
+      <h2>版本与发布</h2>
+      <table><thead><tr><th>资料</th><th>标题 / 集合</th><th>版本状态</th><th>时间</th><th>操作</th></tr></thead><tbody id="sync-rows"></tbody></table>
+      <div class="empty" id="sync-empty" style="display:none">暂无同步版本</div>
+    </div>
+  </section>
+
+  <!-- Liko 表达 -->
+  <section class="page" id="page-style">
+    <div class="panel">
+      <h2>Liko 输出习惯</h2>
+      <p class="muted">语气、长度和口头习惯可以随时改；身份、事实来源和不编造等规则固定不可关闭。</p>
+      <div class="form-grid-2" style="margin-top:10px">
+        <div><label class="field-label">回答长度</label><select id="style-length"><option value="short">简短</option><option value="balanced">适中</option><option value="detailed">详细</option></select></div>
+        <div><label class="field-label">语气</label><select id="style-tone"><option value="warm_friend">温暖朋友感</option><option value="calm">沉稳清楚</option><option value="lively">轻松活泼</option></select></div>
+        <div><label class="field-label">最多段落</label><input id="style-paragraphs" type="number" min="1" max="8"></div>
+      </div>
+      <div class="form-grid-2">
+        <div><label class="field-label">列表使用</label><select id="style-list"><option value="only_when_needed">仅必要时</option><option value="often">经常</option><option value="avoid">尽量不用</option></select></div>
+        <div><label class="field-label">表情</label><select id="style-emoji"><option value="none">不用</option><option value="rare">偶尔</option><option value="light">少量</option></select></div>
+        <div><label class="field-label">主动追问</label><select id="style-question"><option value="when_required">仅缺信息时</option><option value="gentle">适度关心</option><option value="never">不主动追问</option></select></div>
+      </div>
+      <label class="field-label">偏好的表达（每行或顿号分隔）</label><textarea id="style-preferred" rows="3"></textarea>
+      <label class="field-label">不想看到的表达</label><textarea id="style-banned" rows="3"></textarea>
+      <div style="margin-top:10px"><button class="btn ghost" onclick="saveStyle()">保存草稿</button> <button class="btn" onclick="publishStyle()">发布新版</button> <button class="btn ghost" onclick="rollbackStyle()">回滚上一版</button> <span class="muted" id="style-msg"></span></div>
+    </div>
+    <div class="panel"><h2>当前提示词预览</h2><div class="code-preview" id="style-preview"></div></div>
   </section>
 
   <!-- 导出 -->
@@ -204,12 +301,19 @@
         <span class="muted">秒（相邻请求间隔，避免给学校网站造成压力）</span>
       </div>
     </div>
+    <div class="panel">
+      <h2>大模型辅助整理</h2>
+      <label class="switch"><input type="checkbox" id="model-enrichment" style="width:auto"> 对新采集资料自动提取主题、时效、风险和事实证据</label>
+      <p class="muted" style="margin-top:8px">默认关闭，避免意外产生费用。开启后相同原文使用缓存；模型只写辅助标签，不覆盖原文，也不直接决定是否发布。</p>
+    </div>
   </section>
 </main>
 
 <script>
 const $ = id => document.getElementById(id);
 const TYPE_LABEL = { official: "官网公网", internal: "内网", wechat: "公众号" };
+const TRUST_LABEL = { authoritative: "官方权威", institutional: "校内机构", provided: "他人提供", community: "社区线索" };
+const esc = value => String(value ?? "").replace(/[&<>'\"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'\"':"&quot;"}[c]));
 
 document.querySelectorAll("nav button").forEach(btn => {
   btn.onclick = () => {
@@ -219,9 +323,12 @@ document.querySelectorAll("nav button").forEach(btn => {
     $("page-" + btn.dataset.page).classList.add("active");
     if (btn.dataset.page === "dashboard") loadOverview();
     if (btn.dataset.page === "sources") loadSources();
+    if (btn.dataset.page === "inbox") loadManual();
     if (btn.dataset.page === "exports") loadExports();
     if (btn.dataset.page === "settings") loadSettings();
     if (btn.dataset.page === "run") loadCrawlStats();
+    if (btn.dataset.page === "sync") loadSync();
+    if (btn.dataset.page === "style") loadStyle();
   };
 });
 
@@ -254,16 +361,32 @@ async function loadSources() {
   const list = await api("/api/sources");
   $("source-empty").style.display = list.length ? "none" : "block";
   $("source-rows").innerHTML = list.map(s => `<tr>
-    <td>${s.id}</td>
-    <td><div>${s.title || "（未命名）"}</div><div class="src-url">${s.url}</div>
-        ${s.last_error ? `<div class="muted" style="color:var(--err)">${s.last_error}</div>` : ""}</td>
-    <td><span class="tag ${s.official ? "official" : "unofficial"}">${TYPE_LABEL[s.source_type]}</span></td>
-    <td><span class="tag ${s.last_status}">${{pending:"待抓取",changed:"已更新",unchanged:"无变化",failed:"失败",ok:"成功",auth_expired:"需登录"}[s.last_status] || s.last_status}</span></td>
-    <td class="muted">${s.last_fetched_at ? s.last_fetched_at.slice(0, 16).replace("T", " ") : "—"}</td>
+    <td>${esc(s.id)}</td>
+    <td><div>${esc(s.title || "（未命名）")}</div><div class="src-url">${esc(s.url)}</div>
+        ${s.last_error ? `<div class="muted" style="color:var(--err)">${esc(s.last_error)}</div>` : ""}</td>
+    <td><span class="tag ${s.official ? "official" : "unofficial"}">${esc(TYPE_LABEL[s.source_type])}</span><br><span class="muted">${esc(TRUST_LABEL[s.trust_level] || "未分级")}</span></td>
+    <td><span class="tag ${esc(s.last_status)}">${esc({pending:"待抓取",changed:"已更新",unchanged:"无变化",failed:"失败",ok:"成功",auth_expired:"需登录"}[s.last_status] || s.last_status)}</span></td>
+    <td class="muted">${esc(s.last_fetched_at ? s.last_fetched_at.slice(0, 16).replace("T", " ") : "—")}</td>
     <td>
       <button class="btn small ghost" onclick="toggleSource('${s.id}', ${!s.enabled})">${s.enabled ? "停用" : "启用"}</button>
       <button class="btn small ghost" onclick="removeSource('${s.id}')">删除</button>
     </td></tr>`).join("");
+  loadCrawlSites();
+}
+
+async function loadCrawlSites() {
+  const sites = await api("/api/crawl/sites");
+  $("site-list").textContent = `当前共 ${sites.length} 个站点种子：` + sites.map(s => s.name).join("、");
+}
+
+async function addCrawlSite() {
+  $("site-msg").textContent = "";
+  try {
+    const site = await api("/api/crawl/sites", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({name:$("site-name").value, seed_url:$("site-url").value, category:$("site-category").value})});
+    $("site-msg").textContent = `已添加 ${site.name}`;
+    $("site-url").value = $("site-name").value = $("site-category").value = "";
+    loadCrawlSites();
+  } catch (e) { $("site-msg").textContent = e.message; }
 }
 
 async function addSource() {
@@ -305,7 +428,10 @@ let eventSource = null;
 function appendLog(e) {
   const line = document.createElement("div");
   if (e.level === "error") line.className = "error";
-  line.innerHTML = `<span class="time">${(e.time || "").slice(11, 19)}</span>[${e.step}] ${e.message}`;
+  const time = document.createElement("span");
+  time.className = "time";
+  time.textContent = (e.time || "").slice(11, 19);
+  line.append(time, document.createTextNode(`[${e.step || ""}] ${e.message || ""}`));
   $("log").appendChild(line);
   $("log").scrollTop = $("log").scrollHeight;
 }
@@ -378,6 +504,7 @@ async function loadSettings() {
   $("crawl-max").value = s.crawl_max_pages;
   $("delay").value = s.request_delay_seconds;
   $("login-url").value = s.internal_login_url;
+  $("model-enrichment").checked = s.model_enrichment_enabled;
   const st = await api("/api/internal/status");
   $("login-status").textContent = st.has_session ? `会话已保存；${st.message || ""}` : (st.message || "未登录");
 }
@@ -387,7 +514,8 @@ async function saveSettings() {
     body: JSON.stringify({ schedule_enabled: $("sched-enabled").checked, schedule_time: $("sched-time").value,
       crawl_schedule: $("crawl-schedule").value, crawl_time: $("crawl-time").value,
       crawl_max_pages: parseInt($("crawl-max").value) || 60,
-      request_delay_seconds: parseInt($("delay").value) || 2, internal_login_url: $("login-url").value }) });
+      request_delay_seconds: parseInt($("delay").value) || 2, internal_login_url: $("login-url").value,
+      model_enrichment_enabled: $("model-enrichment").checked }) });
   $("settings-msg").textContent = "已保存";
 }
 
@@ -401,6 +529,114 @@ async function startLogin() {
     $("login-status").textContent = st.message || "";
     if (st.state === "done" || st.state === "error") { clearInterval(timer); loadSettings(); }
   }, 2000);
+}
+
+async function submitManual() {
+  $("manual-msg").textContent = "";
+  try {
+    const item = await api("/api/manual-text", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({
+      title:$("manual-title").value, text:$("manual-body").value, source_label:$("manual-source").value,
+      source_url:$("manual-url").value, department:$("manual-dept").value,
+      category:$("manual-category").value, trust_level:$("manual-trust").value
+    })});
+    $("manual-msg").textContent = `已保存 ${item.id}，请在下方审核`;
+    $("manual-title").value = $("manual-body").value = $("manual-source").value = $("manual-url").value = $("manual-dept").value = $("manual-category").value = "";
+    loadManual();
+  } catch (e) { $("manual-msg").textContent = e.message; }
+}
+
+async function loadManual() {
+  const list = await api("/api/manual-text");
+  $("manual-empty").style.display = list.length ? "none" : "block";
+  $("manual-list").innerHTML = list.map(item => `<div class="card" style="margin-bottom:10px">
+    <div class="row"><strong>${esc(item.title)}</strong><span class="tag ${item.review_status === "approved" ? "ok" : item.review_status === "rejected" ? "failed" : "pending"}">${esc({pending:"待审核",approved:"已通过",rejected:"已拒绝"}[item.review_status])}</span><span class="muted">${esc(item.id)} · ${esc(TRUST_LABEL[item.trust_level])}</span></div>
+    <div class="muted">${esc(item.source_label || "未注明来源")}${item.source_url ? ` · ${esc(item.source_url)}` : ""}</div>
+    <div style="margin-top:10px"><button class="btn small ghost" onclick="reviewManual('${item.id}','approved')">审核通过</button> <button class="btn small ghost" onclick="reviewManual('${item.id}','rejected')">拒绝</button> <button class="btn small ghost" onclick="enrichManual('${item.id}')">大模型辅助整理</button> <button class="btn small ghost" onclick="useSyncId('${item.id}')">去暂存</button></div>
+  </div>`).join("");
+}
+
+async function reviewManual(id, status) {
+  const note = prompt(status === "approved" ? "审核备注（可留空）" : "拒绝原因（建议填写）") ?? "";
+  await api(`/api/manual-text/${id}/review`, {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify({status, note})});
+  loadManual();
+}
+
+async function enrichManual(id) {
+  try {
+    const result = await api(`/api/manual-text/${id}/enrich`, {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
+    alert(`整理完成\n\n摘要：${result.summary || "未识别"}\n主题：${result.topic || "未识别"}\n风险：${result.risk_level || "未识别"}\n提醒：${(result.warnings || []).join("；") || "无"}`);
+  } catch (e) { alert(e.message); }
+}
+
+function useSyncId(id) {
+  document.querySelector('nav button[data-page="sync"]').click();
+  $("sync-source-id").value = id;
+}
+
+async function loadSync() {
+  const status = await api("/api/integrations");
+  $("integration-status").innerHTML = `<strong>FastGPT：</strong>${status.fastgpt.configured ? `已连接（知识库尾号 ${esc(status.fastgpt.dataset_id_tail)}）` : "未配置"}<br><strong>知识加工模型：</strong>${status.enrichment_model.configured ? `已配置 ${esc(status.enrichment_model.model)}` : "未配置（仍可正常保存和审核原文）"}`;
+  const rows = await api("/api/fastgpt/versions");
+  $("sync-empty").style.display = rows.length ? "none" : "block";
+  $("sync-rows").innerHTML = rows.map(v => `<tr><td>${esc(v.source_id)}</td><td>${esc(v.title)}<div class="muted">${esc(v.collection_id)}</div></td><td><span class="tag ${v.status === "published" ? "ok" : v.status === "failed" ? "failed" : "pending"}">${esc({staged:"已暂存",published:"线上版本",superseded:"历史版本",failed:"暂存失败"}[v.status] || v.status)}</span><div class="muted">${v.chunks || 0} 块</div></td><td class="muted">${esc((v.published_at || v.staged_at || "").replace("T", " "))}</td><td>${v.status === "staged" ? `<button class="btn small" onclick="promoteSync('${v.source_id}','${v.collection_id}')">审核并发布</button>` : ""}${v.status === "published" ? `<button class="btn small ghost" onclick="rollbackSync('${v.source_id}')">回滚</button>` : ""}</td></tr>`).join("");
+}
+
+async function stageSync() {
+  $("sync-msg").textContent = "正在清洗并暂存…";
+  try {
+    const row = await api("/api/fastgpt/stage", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({source_id:$("sync-source-id").value.trim()})});
+    $("sync-msg").textContent = row.unchanged ? "内容没有变化，沿用已有版本" : "已暂存；确认无误后再发布";
+    loadSync();
+  } catch (e) { $("sync-msg").textContent = e.message; }
+}
+
+async function promoteSync(sourceId, collectionId) {
+  if (!confirm("确认把这个版本切换为线上知识版本？原线上版本会保留，可回滚。")) return;
+  try { await api("/api/fastgpt/promote", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({source_id:sourceId, collection_id:collectionId})}); loadSync(); }
+  catch (e) { alert(e.message); }
+}
+
+async function rollbackSync(sourceId) {
+  if (!confirm("确认恢复上一版知识内容？")) return;
+  try { await api("/api/fastgpt/rollback", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({source_id:sourceId})}); loadSync(); }
+  catch (e) { alert(e.message); }
+}
+
+async function loadStyle() {
+  const data = await api("/api/liko-style");
+  const s = data.draft;
+  $("style-length").value = s.answer_length;
+  $("style-tone").value = s.tone;
+  $("style-paragraphs").value = s.paragraphs;
+  $("style-list").value = s.list_frequency;
+  $("style-emoji").value = s.emoji;
+  $("style-question").value = s.proactive_question;
+  $("style-preferred").value = s.preferred_phrases || "";
+  $("style-banned").value = s.banned_phrases || "";
+  $("style-preview").textContent = data.prompt_preview;
+  $("style-msg").textContent = `已发布 ${data.versions.length} 个版本`;
+}
+
+function stylePayload() {
+  return {answer_length:$("style-length").value, tone:$("style-tone").value, paragraphs:parseInt($("style-paragraphs").value) || 3, list_frequency:$("style-list").value, emoji:$("style-emoji").value, proactive_question:$("style-question").value, preferred_phrases:$("style-preferred").value, banned_phrases:$("style-banned").value};
+}
+
+async function saveStyle() {
+  await api("/api/liko-style/draft", {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(stylePayload())});
+  $("style-msg").textContent = "草稿已保存";
+  loadStyle();
+}
+
+async function publishStyle() {
+  await api("/api/liko-style/draft", {method:"PATCH", headers:{"Content-Type":"application/json"}, body:JSON.stringify(stylePayload())});
+  await api("/api/liko-style/publish", {method:"POST"});
+  $("style-msg").textContent = "新版已发布";
+  loadStyle();
+}
+
+async function rollbackStyle() {
+  try { await api("/api/liko-style/rollback", {method:"POST"}); loadStyle(); }
+  catch (e) { $("style-msg").textContent = e.message; }
 }
 
 loadOverview();

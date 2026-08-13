@@ -14,6 +14,7 @@ from typing import Callable, Iterator
 
 from . import internal_fetch, settings
 from .fetch import fetch_source
+from .enrichment import KnowledgeEnricher
 from .process import CLEAN_ROOT, DATA_ROOT, EXPORT_ROOT, PAGES_ROOT, load_rag_module, process_pages, write_page_markdown
 from .registry import Registry, now_iso
 
@@ -65,6 +66,7 @@ def fetch_all(registry: Registry, only_ids: set[str] | None = None,
                 "department": src["department"],
                 "campus": src["campus"],
                 "source_type": src["source_type"],
+                "trust_level": src.get("trust_level", "authoritative" if src["official"] else "community"),
                 "official": "true" if src["official"] else "false",
                 "author": result.author,
                 "published_at": result.published_at,
@@ -160,6 +162,28 @@ def export_fastgpt(docs: list[dict], emit: Callable[[Event], None]) -> Path | No
     return zip_path
 
 
+def enrich_documents(docs: list[dict], emit: Callable[[Event], None]) -> None:
+    """按设置为文档生成辅助结构；失败只告警，不影响原文加工与导出。"""
+    if not settings.load().get("model_enrichment_enabled"):
+        return
+    enricher = KnowledgeEnricher()
+    if not enricher.configured:
+        emit(_event("enrich", "已开启模型辅助整理，但服务器尚未配置模型密钥", level="error"))
+        return
+    candidates = [d for d in docs if d.get("_doc") and d.get("status") in {"可导入", "待核验"}]
+    emit(_event("enrich", f"开始辅助整理 {len(candidates)} 篇资料（相同原文自动使用缓存）"))
+    for item in candidates:
+        try:
+            result = enricher.enrich(title=item["title"], text=item["_doc"].clean_body)
+            item["model_enrichment"] = {
+                key: result.get(key)
+                for key in ("summary", "topic", "campus", "audience", "department",
+                            "document_type", "published_at", "valid_until", "risk_level", "warnings")
+            }
+        except Exception as exc:  # noqa: BLE001 - 单篇模型失败不能破坏流水线
+            emit(_event("enrich", f"△ {item['title']}：模型整理失败（{str(exc)[:100]}）", level="error"))
+
+
 def process_and_export_pages(emit: Callable[[Event], None]) -> tuple[list[dict], Path | None]:
     """对 data/pages/ 全量页面做清洗、切块并导出 FastGPT 包。供流水线与爬虫共用。"""
     rag = load_rag_module()
@@ -169,6 +193,7 @@ def process_and_export_pages(emit: Callable[[Event], None]) -> tuple[list[dict],
         return [], None
     emit(_event("process", f"开始清洗 {len(all_pages)} 篇页面"))
     docs = process_pages(rag, all_pages)
+    enrich_documents(docs, emit)
     ok = sum(1 for d in docs if d["status"] == "可导入")
     review = sum(1 for d in docs if d["status"] == "待核验")
     dropped = len(docs) - ok - review
@@ -212,6 +237,7 @@ def run_pipeline(registry: Registry, only_ids: set[str] | None = None) -> Iterat
             yield _event("process", f"开始清洗 {len(changed_files)} 篇更新文档")
             rag = load_rag_module()
             docs = process_pages(rag, changed_files)
+            enrich_documents(docs, lambda event: None)
             for d in docs:
                 icon = {"可导入": "✓", "待核验": "◐"}.get(d["status"], "✗")
                 yield _event("process", f"{icon} {d['title']}：{d['status']}（{d.get('chunks', 0)} 块）",
@@ -222,6 +248,7 @@ def run_pipeline(registry: Registry, only_ids: set[str] | None = None) -> Iterat
             yield _event("export", "开始生成 FastGPT 导入包")
             all_docs = process_pages(rag, sorted(PAGES_ROOT.glob("*.md")))
             export_events: list[Event] = []
+            enrich_documents(all_docs, emit=export_events.append)
             zip_path = export_fastgpt(all_docs, emit=export_events.append)
             yield from export_events
             for d in all_docs:

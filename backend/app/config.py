@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     fastgpt_api_key: str | None = Field(default=None, repr=False)
     fastgpt_app_id: str | None = None
     fastgpt_timeout_seconds: float = Field(default=60, ge=5, le=180)
+    liko_style_file: str | None = None
     database_url: str | None = Field(default=None, repr=False)
     session_secret: str | None = Field(default=None, repr=False)
     session_days: int = Field(default=30, ge=1, le=90)

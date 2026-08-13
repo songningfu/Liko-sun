@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import httpx
 
 from .config import Settings
+from .liko_style import load_published_style
 from .schemas import SourceItem
 
 
@@ -178,6 +179,9 @@ class FastGPTClient:
             raise FastGPTUpstreamError("FastGPT 地址必须使用 HTTPS。")
 
         variables = {"campus": campus or "通用"}
+        style_context = load_published_style(self.settings.liko_style_file)
+        if style_context:
+            variables["style_context"] = style_context
         if memories:
             safe_memories = [item.strip()[:500] for item in memories if item.strip()]
             variables["memory_context"] = (

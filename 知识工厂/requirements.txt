@@ -4,3 +4,4 @@ beautifulsoup4>=4.12
 lxml>=5.0
 apscheduler>=3.10,<4
 playwright>=1.40
+python-dotenv>=1.0,<2

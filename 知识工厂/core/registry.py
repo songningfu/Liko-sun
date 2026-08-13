@@ -13,6 +13,7 @@ REGISTRY_FILE = DATA_ROOT / "registry.json"
 _lock = threading.Lock()
 
 SOURCE_TYPES = {"official", "internal", "wechat"}
+TRUST_LEVELS = {"authoritative", "institutional", "provided", "community"}
 # 官方与内网页面属于"官方事实"通道；公众号内容一律标记为非官方待核验。
 OFFICIAL_TYPES = {"official", "internal"}
 
@@ -48,7 +49,8 @@ class Registry:
         return None
 
     def add(self, *, url: str, source_type: str, title: str = "", department: str = "",
-            campus: str = "通用", category: str = "", notes: str = "") -> dict:
+            campus: str = "通用", category: str = "", notes: str = "",
+            trust_level: str = "") -> dict:
         url = url.strip()
         if source_type not in SOURCE_TYPES:
             raise ValueError(f"不支持的来源类型: {source_type}")
@@ -60,6 +62,13 @@ class Registry:
                 raise ValueError("官方来源仅限 szu.edu.cn 及其子域名；内网页面请选择 internal 类型")
         if source_type == "wechat" and "mp.weixin.qq.com" not in url:
             raise ValueError("公众号来源目前仅支持 mp.weixin.qq.com 文章链接")
+        trust_level = trust_level or {
+            "official": "authoritative", "internal": "institutional", "wechat": "community"
+        }[source_type]
+        if trust_level not in TRUST_LEVELS:
+            raise ValueError("不支持的可信等级")
+        if source_type == "wechat" and trust_level == "authoritative":
+            raise ValueError("公众号文章不能直接标为权威官方资料")
 
         data = self._read()
         for src in data["sources"]:
@@ -71,6 +80,7 @@ class Registry:
             "url": url,
             "source_type": source_type,
             "official": source_type in OFFICIAL_TYPES,
+            "trust_level": trust_level,
             "department": department.strip(),
             "campus": campus.strip() or "通用",
             "category": category.strip(),
@@ -92,7 +102,7 @@ class Registry:
         data = self._read()
         for src in data["sources"]:
             if src["id"] == source_id:
-                allowed = {"title", "department", "campus", "category", "notes", "enabled",
+                allowed = {"title", "department", "campus", "category", "notes", "enabled", "trust_level",
                            "last_fetched_at", "last_hash", "last_status", "last_error", "fetch_count"}
                 for key, value in fields.items():
                     if key in allowed:
@@ -116,6 +126,8 @@ class Registry:
             "enabled": sum(1 for s in sources if s["enabled"]),
             "official": sum(1 for s in sources if s["official"]),
             "unofficial": sum(1 for s in sources if not s["official"]),
+            "authoritative": sum(1 for s in sources if s.get("trust_level") == "authoritative"),
+            "institutional": sum(1 for s in sources if s.get("trust_level") == "institutional"),
             "ok": sum(1 for s in sources if s["last_status"] in {"ok", "changed", "unchanged"}),
             "failed": sum(1 for s in sources if s["last_status"] == "failed"),
             "pending": sum(1 for s in sources if s["last_status"] == "pending"),
