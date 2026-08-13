@@ -5,7 +5,13 @@ from fastapi.testclient import TestClient
 from app.auth import CurrentUser, get_current_user
 from app.config import Settings, get_settings
 from app.fastgpt import FastGPTEvent
-from app.main import app, get_fastgpt_client
+from app.main import (
+    _asks_user_name,
+    _explicit_profile_fact,
+    _name_from_memories,
+    app,
+    get_fastgpt_client,
+)
 from app.memory import MemoryRecord, get_memory_store
 
 
@@ -200,6 +206,55 @@ def test_authenticated_user_with_consent_uses_long_term_memory() -> None:
         "给我一点学习建议",
         "我会简短回答。",
     )
+
+
+def test_explicit_name_profile_is_parsed_and_recalled_without_campus_rag() -> None:
+    assert _explicit_profile_fact("我的名字是小荔。") == "用户的名字是小荔。"
+    assert _explicit_profile_fact("我叫什么名字？") is None
+    assert _asks_user_name("我叫什么名字？") is True
+    assert _name_from_memories(["用户的名字是小荔。"]) == "小荔"
+
+    class FakeMemoryStore:
+        configured = True
+
+        async def search(self, user_id, query, limit):
+            assert (user_id, query, limit) == ("user_123", "我叫什么名字？", 5)
+            return []
+
+        async def list_memories(self, user_id, limit):
+            assert (user_id, limit) == ("user_123", 100)
+            return [MemoryRecord(id="mem_name", text="用户的名字是小荔。")]
+
+    class FakeFastGPTClient:
+        async def stream_chat(self, **kwargs):
+            raise AssertionError("明确的个人资料问答不应交给校园知识库")
+            yield
+
+    configured = Settings(
+        _env_file=None,
+        fastgpt_base_url="https://rag.example.com/api",
+        fastgpt_api_key="test-only-key",
+        fastgpt_app_id="app_test",
+    )
+    app.dependency_overrides[get_settings] = lambda: configured
+    app.dependency_overrides[get_fastgpt_client] = lambda: FakeFastGPTClient()
+    app.dependency_overrides[get_memory_store] = lambda: FakeMemoryStore()
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="user_123",
+        authenticated=True,
+        memory_consent=True,
+    )
+    try:
+        response = client.post(
+            "/api/chat/stream",
+            json={"requestId": "request-name-01", "message": "我叫什么名字？"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert any(item.get("text") == "你叫小荔。" for item in parse_sse_data(response.text))
+    assert '"sourceCount": 0' in response.text
 
 
 def test_chat_rejects_blank_message() -> None:

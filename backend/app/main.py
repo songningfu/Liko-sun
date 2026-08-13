@@ -145,9 +145,22 @@ def _explicit_profile_fact(message: str) -> str | None:
     if not match:
         return None
     name = match.group(1).strip()
-    if name in {"什么", "啥", "谁", "哪个"}:
+    if any(word in name for word in ("什么", "啥", "谁", "哪个", "哪一个")):
         return None
     return f"用户的名字是{name}。"
+
+
+def _asks_user_name(message: str) -> bool:
+    normalized = re.sub(r"[\s？?！!，,。]+", "", message)
+    return normalized in {"我叫什么", "我叫什么名字", "你记得我叫什么", "你记得我的名字吗"}
+
+
+def _name_from_memories(memories: list[str]) -> str | None:
+    for memory in memories:
+        match = re.search(r"用户的名字是([^。；;，,\n]{1,20})", memory)
+        if match:
+            return match.group(1).strip()
+    return None
 
 
 _background_tasks: set[asyncio.Task] = set()
@@ -315,6 +328,15 @@ async def chat_stream(
         except MemoryServiceError:
             pass
 
+        if _asks_user_name(payload.message) and not _name_from_memories(memory_context):
+            try:
+                all_memories = await memory_store.list_memories(current_user.user_id, 100)
+                memory_context.extend(
+                    item.text for item in all_memories if item.text not in memory_context
+                )
+            except MemoryServiceError:
+                pass
+
     yield ServerSentEvent(
         event="meta",
         data={
@@ -330,6 +352,36 @@ async def chat_stream(
             },
         },
     )
+
+    remembered_name = _name_from_memories(memory_context) if _asks_user_name(payload.message) else None
+    if remembered_name:
+        answer_text = f"你叫{remembered_name}。"
+        yield ServerSentEvent(event="delta", data={"text": answer_text})
+        yield ServerSentEvent(event="sources", data={"items": []})
+        if current_user.authenticated and current_user.user_id and database:
+            try:
+                database.add_chat_message(
+                    message_id=str(uuid4()),
+                    conversation_id=conversation_id,
+                    user_id=current_user.user_id,
+                    role="assistant",
+                    content=answer_text,
+                    answer_id=answer_id,
+                    sources_json="[]",
+                )
+            except (PermissionError, TypeError, ValueError):
+                pass
+        yield ServerSentEvent(
+            event="done",
+            data={
+                "answerId": answer_id,
+                "finishReason": "stop",
+                "canRate": True,
+                "sourceCount": 0,
+                "memorySaved": True,
+            },
+        )
+        return
 
     if not config.fastgpt_configured:
         message = "校园知识库服务尚未连接。我暂时不能可靠回答这个问题，也不会根据示例内容猜测。"
