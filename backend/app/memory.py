@@ -158,14 +158,18 @@ class Mem0MemoryStore:
         last_error: Exception | None = None
         for attempt in range(2):
             try:
-                client = self._get_client()
-                return await asyncio.to_thread(getattr(client, method), *args, **kwargs)
+                def invoke():
+                    client = self._get_client()
+                    try:
+                        return getattr(client, method)(*args, **kwargs)
+                    finally:
+                        self._reset_client()
+
+                return await asyncio.to_thread(invoke)
             except TypeError:
                 raise
             except Exception as error:
                 last_error = error
-                if attempt == 0:
-                    self._reset_client()
         assert last_error is not None
         raise last_error
 
