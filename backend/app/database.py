@@ -5,7 +5,7 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, func, inspect, select, text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, create_engine, delete, func, inspect, select, text
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
@@ -54,6 +54,32 @@ class UsageCounter(Base):
     subject_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     period_key: Mapped[str] = mapped_column(String(40), primary_key=True)
     count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class ChatConversation(Base):
+    __tablename__ = "chat_conversations"
+
+    id: Mapped[str] = mapped_column(String(100), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now, nullable=False, index=True)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("chat_conversations.id", ondelete="CASCADE"), index=True
+    )
+    user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    role: Mapped[str] = mapped_column(String(12), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    answer_id: Mapped[str | None] = mapped_column(String(100), index=True)
+    sources_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    source_type: Mapped[str | None] = mapped_column(String(24))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False, index=True)
 
 
 class Database:
@@ -192,6 +218,137 @@ class Database:
                     or 0
                 ),
             }
+
+    def ensure_conversation(self, *, user_id: str, conversation_id: str, title: str) -> None:
+        with self.session() as db, db.begin():
+            conversation = db.get(ChatConversation, conversation_id)
+            if conversation is not None:
+                if conversation.user_id != user_id:
+                    raise PermissionError("不能访问其他用户的对话。")
+                conversation.updated_at = utc_now()
+                return
+            db.add(
+                ChatConversation(
+                    id=conversation_id,
+                    user_id=user_id,
+                    title=title.strip()[:120] or "新的对话",
+                )
+            )
+
+    def add_chat_message(
+        self,
+        *,
+        message_id: str,
+        conversation_id: str,
+        user_id: str,
+        role: str,
+        content: str,
+        answer_id: str | None = None,
+        sources_json: str = "[]",
+        source_type: str | None = None,
+    ) -> None:
+        with self.session() as db, db.begin():
+            conversation = db.get(ChatConversation, conversation_id)
+            if conversation is None or conversation.user_id != user_id:
+                raise PermissionError("不能写入这个对话。")
+            db.add(
+                ChatMessage(
+                    id=message_id,
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    role=role,
+                    content=content,
+                    answer_id=answer_id,
+                    sources_json=sources_json,
+                    source_type=source_type,
+                )
+            )
+            conversation.updated_at = utc_now()
+
+    def list_conversations(self, *, user_id: str, limit: int) -> list[dict]:
+        with self.session() as db:
+            conversations = list(
+                db.scalars(
+                    select(ChatConversation)
+                    .where(ChatConversation.user_id == user_id)
+                    .order_by(ChatConversation.updated_at.desc())
+                    .limit(limit)
+                )
+            )
+            result = []
+            for conversation in conversations:
+                messages = list(
+                    db.scalars(
+                        select(ChatMessage)
+                        .where(ChatMessage.conversation_id == conversation.id)
+                        .order_by(ChatMessage.created_at.desc())
+                        .limit(2)
+                    )
+                )
+                preview = next((item.content for item in messages if item.role == "assistant"), "")
+                result.append(
+                    {
+                        "id": conversation.id,
+                        "title": conversation.title,
+                        "preview": preview[:120],
+                        "messageCount": int(
+                            db.scalar(
+                                select(func.count())
+                                .select_from(ChatMessage)
+                                .where(ChatMessage.conversation_id == conversation.id)
+                            )
+                            or 0
+                        ),
+                        "createdAt": conversation.created_at.isoformat(),
+                        "updatedAt": conversation.updated_at.isoformat(),
+                    }
+                )
+            return result
+
+    def conversation_messages(self, *, user_id: str, conversation_id: str) -> list[ChatMessage]:
+        with self.session() as db:
+            conversation = db.get(ChatConversation, conversation_id)
+            if conversation is None or conversation.user_id != user_id:
+                raise LookupError("没有找到这段对话。")
+            return list(
+                db.scalars(
+                    select(ChatMessage)
+                    .where(ChatMessage.conversation_id == conversation_id)
+                    .order_by(ChatMessage.created_at.asc())
+                )
+            )
+
+    def delete_conversation(self, *, user_id: str, conversation_id: str) -> bool:
+        with self.session() as db, db.begin():
+            conversation = db.get(ChatConversation, conversation_id)
+            if conversation is None or conversation.user_id != user_id:
+                return False
+            db.execute(delete(ChatMessage).where(ChatMessage.conversation_id == conversation_id))
+            db.delete(conversation)
+            return True
+
+    def recent_questions(self, *, since: datetime) -> list[dict]:
+        with self.session() as db:
+            rows = db.execute(
+                select(
+                    ChatMessage.content,
+                    ChatMessage.user_id,
+                    ChatMessage.source_type,
+                    ChatMessage.created_at,
+                ).where(
+                    ChatMessage.role == "user",
+                    ChatMessage.created_at >= since,
+                )
+            ).all()
+            return [
+                {
+                    "question": row.content,
+                    "userId": row.user_id,
+                    "source": row.source_type or "input",
+                    "createdAt": row.created_at,
+                }
+                for row in rows
+            ]
 
 
 @lru_cache(maxsize=8)

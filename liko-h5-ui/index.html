@@ -570,6 +570,9 @@
     .chat-welcome-note { display:block; margin-top:8px; color:var(--muted); font-size:10px; }
 
     .conversation { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+    .session-history { display:grid; gap:14px; margin-bottom:14px; }
+    .session-turn { display:grid; gap:8px; }
+    .session-turn .answer-actions, .session-turn .feedback-note { display:none; }
     .user-message { max-width:82%; margin:0 0 11px auto; padding:11px 14px; border-radius:18px 18px 5px 18px; background:#3b3531; color:white; font-size:14px; line-height:1.55; }
 
     .answer-card {
@@ -720,6 +723,13 @@
     .memory-footer-actions { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
     .memory-footer-actions button { min-height:43px; border:1px solid var(--line); border-radius:13px; background:var(--card); color:#655d57; font-weight:680; cursor:pointer; }
     .memory-footer-actions .memory-clear { color:#b04e58; }
+    .history-list { display:grid; gap:10px; }
+    .history-item { padding:14px; border:1px solid var(--line); border-radius:18px; background:var(--card); }
+    .history-item-main { width:100%; padding:0; border:0; background:transparent; color:inherit; text-align:left; cursor:pointer; }
+    .history-item-main strong { display:block; font-size:13px; line-height:1.45; }
+    .history-item-main span { display:block; margin-top:5px; color:var(--muted); font-size:10px; line-height:1.55; }
+    .history-item-meta { margin-top:10px; display:flex; align-items:center; justify-content:space-between; color:#9a918a; font-size:9px; }
+    .history-delete { min-height:30px; padding:0 10px; border:1px solid var(--line); border-radius:10px; background:#f5efe8; color:#b04e58; font-size:10px; cursor:pointer; }
 
     /* 底部导航 */
     .bottom-nav {
@@ -984,8 +994,8 @@
         </section>
 
         <section class="hot-section" aria-label="高频问题推荐">
-          <div class="section-heading"><strong>最近大家都在问</strong><span>结合近期热度推荐</span></div>
-          <div class="hot-grid">
+          <div class="section-heading"><strong>最近大家都在问</strong><span id="recommendationNote">结合近 7 天真实提问排序</span></div>
+          <div class="hot-grid" id="hotGrid">
             <button class="hot-question" type="button" data-question="丽湖校区图书馆几点关门？"><strong>图书馆几点关门？</strong><span>今日更新 · 学习资源</span></button>
             <button class="hot-question" type="button" data-question="校园卡丢了怎么补办？"><strong>校园卡怎么补办？</strong><span>办事指南</span></button>
             <button class="hot-question" type="button" data-question="这学期什么时候放假？"><strong>这学期什么时候放假？</strong><span>近期高频 · 校历</span></button>
@@ -993,6 +1003,7 @@
           </div>
         </section>
 
+        <div class="session-history" id="sessionHistory" aria-label="本次对话历史"></div>
         <section class="conversation" id="conversation" aria-label="校园问答" hidden>
           <div class="user-message" id="questionText"></div>
           <article class="answer-card" id="answerCard">
@@ -1038,7 +1049,7 @@
         <button class="setting-row" id="colorChoiceAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/><path d="M8.5 15c2.4 1.8 4.6 1.8 7 0"/></svg></span>Liko 配色</span><span class="setting-side" id="colorChoiceSide">注册后可选一次 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/></svg></span>个人资料</span><span class="setting-side">未完善 ›</span></button>
         <button class="setting-row" id="changePasswordAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>修改密码</span><span class="setting-side">登录后可用 ›</span></button>
-        <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side">›</span></button>
+        <button class="setting-row" id="conversationHistoryAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side" id="conversationHistorySide">登录后保存 ›</span></button>
         <button class="setting-row" id="memoryConsentAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-4.6 7A4 4 0 0 0 9 17.7V21l3-2 3 2v-3.3A4 4 0 0 0 16.6 10 5 5 0 0 0 12 3Z"/><path d="M9.5 10.5h5M10.5 13.5h3"/></svg></span>Liko 对我的了解</span><span class="setting-side" id="memoryConsentSide">登录后开启 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 2.7 7.7 7 10 4.3-2.3 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>偏好与隐私</span><span class="setting-side">›</span></button>
       </section>
@@ -1130,6 +1141,20 @@
     </section>
   </div>
 
+  <div class="memory-sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
+    <section class="memory-panel">
+      <header class="memory-header">
+        <button class="memory-back" id="closeHistory" type="button" aria-label="返回我的"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div class="memory-heading"><strong id="historyTitle">对话记录</strong><span>登录账号自动保存，你可以随时删除</span></div>
+        <span></span>
+      </header>
+      <div class="memory-body">
+        <div class="memory-list-head"><strong>最近对话</strong><span id="historyCount">读取中…</span></div>
+        <div class="history-list" id="historyList" aria-live="polite"><div class="memory-empty">正在读取对话…</div></div>
+      </div>
+    </section>
+  </div>
+
   <script>
     (() => {
       const body = document.body;
@@ -1151,6 +1176,10 @@
       const feedbackDown = document.querySelector('.feedback-down');
       const memorySheet = document.getElementById('memorySheet');
       const memoryList = document.getElementById('memoryList');
+      const historySheet = document.getElementById('historySheet');
+      const historyList = document.getElementById('historyList');
+      const sessionHistory = document.getElementById('sessionHistory');
+      const hotGrid = document.getElementById('hotGrid');
       const localApiOrigin = ['127.0.0.1', 'localhost'].includes(location.hostname) ? 'http://127.0.0.1:8001' : '';
       const API_BASE = window.LIKO_API_BASE ?? localApiOrigin;
       let currentPage = 'liko';
@@ -1236,6 +1265,7 @@
           : !systemState.memoryConfigured
             ? '尚未部署 ›'
             : state.user.memoryConsent ? '已开启 ›' : '已关闭 ›';
+        document.getElementById('conversationHistorySide').textContent = state.authenticated ? '已自动保存 ›' : '登录后保存 ›';
         document.querySelector('#changePasswordAction .setting-side').textContent = state.authenticated ? '›' : '登录后可用 ›';
         const quota = state.quota || authState.quota;
         if (quota) document.getElementById('quotaCopy').textContent = `${state.authenticated ? '登录用户' : '游客'}今日剩余 ${quota.remaining} / ${quota.limit} 次`;
@@ -1396,6 +1426,142 @@
         }
       };
 
+      const loadRecommendations = async () => {
+        try {
+          const items = await apiRequest('/api/recommendations');
+          if (!Array.isArray(items) || !items.length) return;
+          document.getElementById('recommendationNote').textContent = items.some(item => item.score > 0)
+            ? '结合近 7 天匿名热度排序'
+            : '常用校园问题';
+          hotGrid.replaceChildren();
+          items.slice(0, 4).forEach(item => {
+            const button = document.createElement('button');
+            button.className = 'hot-question';
+            button.type = 'button';
+            button.dataset.question = item.question;
+            const title = document.createElement('strong');
+            title.textContent = item.question;
+            const detail = document.createElement('span');
+            detail.textContent = `${item.label} · ${item.category}`;
+            button.append(title, detail);
+            hotGrid.append(button);
+          });
+        } catch {
+          document.getElementById('recommendationNote').textContent = '常用校园问题';
+        }
+      };
+
+      const historyDate = value => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
+      };
+
+      const storedTurn = (question, assistant) => {
+        const turn = document.createElement('section');
+        turn.className = 'session-turn';
+        const user = document.createElement('div');
+        user.className = 'user-message';
+        user.textContent = question.content;
+        const card = document.createElement('article');
+        card.className = 'answer-card';
+        const head = document.createElement('header');
+        head.className = 'answer-head';
+        head.innerHTML = '<span class="answer-avatar" aria-hidden="true">●</span><div><div class="answer-name">Liko</div><div class="answer-note">已保存的回答</div></div>';
+        const bodyNode = document.createElement('div');
+        bodyNode.className = 'answer-body';
+        bodyNode.textContent = assistant?.content || '这条回答当时没有完整保存。';
+        const sources = document.createElement('footer');
+        sources.className = 'sources';
+        (assistant?.sources || []).slice(0, 4).forEach(item => {
+          const link = document.createElement('a');
+          link.className = 'source-link';
+          link.href = item.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.textContent = item.title || '官方来源';
+          sources.append(link);
+        });
+        if (!(assistant?.sources || []).length) sources.classList.add('is-empty');
+        card.append(head, bodyNode, sources);
+        turn.append(user, card);
+        return turn;
+      };
+
+      const openStoredConversation = async item => {
+        try {
+          const messages = await apiRequest(`/api/users/me/conversations/${encodeURIComponent(item.id)}/messages`);
+          sessionHistory.replaceChildren();
+          for (let index = 0; index < messages.length; index += 1) {
+            if (messages[index].role !== 'user') continue;
+            const assistant = messages[index + 1]?.role === 'assistant' ? messages[index + 1] : null;
+            sessionHistory.append(storedTurn(messages[index], assistant));
+          }
+          conversationId = item.id;
+          conversation.hidden = true;
+          document.getElementById('questionText').textContent = '';
+          answerBody.innerHTML = '';
+          chatWelcome.hidden = true;
+          historySheet.classList.remove('is-open');
+          switchPage('liko');
+          setChatMode(true);
+        } catch (error) { showToast(error.message); }
+      };
+
+      const loadConversationHistory = async () => {
+        document.getElementById('historyCount').textContent = '读取中…';
+        try {
+          const items = await apiRequest('/api/users/me/conversations?limit=50');
+          historyList.replaceChildren();
+          document.getElementById('historyCount').textContent = `${items.length} 段`;
+          if (!items.length) {
+            historyList.innerHTML = '<div class="memory-empty">还没有保存的对话。登录后完成的问答会自动出现在这里。</div>';
+            return;
+          }
+          items.forEach(item => {
+            const card = document.createElement('article');
+            card.className = 'history-item';
+            const main = document.createElement('button');
+            main.type = 'button';
+            main.className = 'history-item-main';
+            const title = document.createElement('strong');
+            title.textContent = item.title;
+            const preview = document.createElement('span');
+            preview.textContent = item.preview || '打开查看这段对话';
+            main.append(title, preview);
+            main.addEventListener('click', () => openStoredConversation(item));
+            const meta = document.createElement('div');
+            meta.className = 'history-item-meta';
+            const time = document.createElement('span');
+            time.textContent = `${item.messageCount} 条 · ${historyDate(item.updatedAt)}`;
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.className = 'history-delete';
+            remove.textContent = '删除';
+            remove.addEventListener('click', async () => {
+              if (!confirm('确定删除这段对话吗？删除后无法恢复。')) return;
+              try {
+                await apiRequest(`/api/users/me/conversations/${encodeURIComponent(item.id)}`, {method:'DELETE'});
+                if (conversationId === item.id) {
+                  conversationId = null;
+                  sessionHistory.replaceChildren();
+                  conversation.hidden = true;
+                  chatWelcome.hidden = false;
+                }
+                await loadConversationHistory();
+                showToast('这段对话已删除');
+              } catch (error) { showToast(error.message); }
+            });
+            meta.append(time, remove);
+            card.append(main, meta);
+            historyList.append(card);
+          });
+        } catch (error) {
+          document.getElementById('historyCount').textContent = '读取失败';
+          historyList.innerHTML = '<div class="memory-empty">暂时无法读取对话记录，请稍后再试。</div>';
+          showToast(error.message);
+        }
+      };
+
       const openMemoryManager = async () => {
         if (!authState.authenticated) { openAuth(); return; }
         if (!systemState.memoryConfigured) { showToast('长期记忆服务尚未启用'); return; }
@@ -1508,6 +1674,13 @@
         catch (error) { showToast(error.message); }
       });
       document.getElementById('memoryConsentAction').addEventListener('click', openMemoryManager);
+      document.getElementById('conversationHistoryAction').addEventListener('click', async () => {
+        if (!authState.authenticated) { openAuth(); return; }
+        historySheet.classList.add('is-open');
+        await loadConversationHistory();
+      });
+      document.getElementById('closeHistory').addEventListener('click', () => historySheet.classList.remove('is-open'));
+      historySheet.addEventListener('click', event => { if (event.target === historySheet) historySheet.classList.remove('is-open'); });
       document.getElementById('closeMemory').addEventListener('click', async () => {
         memorySheet.classList.remove('is-open');
         await refreshGreeting();
@@ -1789,6 +1962,7 @@
           if (data.finishReason === 'stop') document.getElementById('answerNote').textContent = '已核对校园资料';
           if (data.finishReason === 'empty') document.getElementById('answerNote').textContent = '未生成可靠答案';
           answerTime.textContent = data.finishReason === 'integration_stub' ? '刚刚 · 知识库尚未接入' : '刚刚';
+          if (data.memorySaved === false) showToast('回答已保存，但这次长期记忆未写入，请稍后重试');
         }
         if (eventName === 'error') {
           const error = new Error(data.message || '问答服务暂时不可用');
@@ -1834,8 +2008,25 @@
         return `web_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       };
 
+      const archiveCurrentTurn = () => {
+        const question = document.getElementById('questionText').textContent.trim();
+        if (conversation.hidden || !question) return;
+        const turn = document.createElement('section');
+        turn.className = 'session-turn';
+        const user = document.createElement('div');
+        user.className = 'user-message';
+        user.textContent = question;
+        const card = document.getElementById('answerCard').cloneNode(true);
+        card.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
+        card.querySelector('.answer-actions')?.remove();
+        card.querySelector('.feedback-note')?.remove();
+        turn.append(user, card);
+        sessionHistory.append(turn);
+      };
+
       const useQuestion = async (question, source = 'input') => {
         activeRequest?.abort();
+        archiveCurrentTurn();
         const requestController = new AbortController();
         activeRequest = requestController;
         chatWelcome.hidden = true;
@@ -1876,7 +2067,10 @@
         }
       };
 
-      document.querySelectorAll('.hot-question').forEach(button => button.addEventListener('click', () => useQuestion(button.dataset.question, 'recommendation')));
+      hotGrid.addEventListener('click', event => {
+        const button = event.target.closest('.hot-question');
+        if (button) useQuestion(button.dataset.question, 'recommendation');
+      });
       document.getElementById('questionForm').addEventListener('submit', event => {
         event.preventDefault();
         const input = document.getElementById('questionInput');
@@ -1914,6 +2108,7 @@
       }));
       document.querySelectorAll('.shell-action').forEach(button => button.addEventListener('click', () => showToast('功能入口已预留')));
       refreshAccount();
+      loadRecommendations();
     })();
   </script>
 </body>

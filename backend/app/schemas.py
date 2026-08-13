@@ -106,3 +106,32 @@ class MemoryItemResponse(BaseModel):
     updated_at: str | None = Field(default=None, alias="updatedAt")
 
     model_config = {"populate_by_name": True}
+
+
+class ConversationSummaryResponse(BaseModel):
+    id: str
+    title: str
+    preview: str = ""
+    message_count: int = Field(alias="messageCount")
+    created_at: str = Field(alias="createdAt")
+    updated_at: str = Field(alias="updatedAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class ConversationMessageResponse(BaseModel):
+    id: str
+    role: Literal["user", "assistant"]
+    content: str
+    answer_id: str | None = Field(default=None, alias="answerId")
+    sources: list[SourceItem] = Field(default_factory=list)
+    created_at: str = Field(alias="createdAt")
+
+    model_config = {"populate_by_name": True}
+
+
+class RecommendationItemResponse(BaseModel):
+    question: str
+    label: str
+    category: str
+    score: float

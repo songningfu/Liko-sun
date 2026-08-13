@@ -43,6 +43,8 @@ class LongTermMemoryStore(Protocol):
         conversation_id: str,
     ) -> None: ...
 
+    async def remember_fact(self, user_id: str, fact: str, conversation_id: str) -> None: ...
+
     async def list_memories(self, user_id: str, limit: int = 100) -> list[MemoryRecord]: ...
 
     async def update_memory(self, user_id: str, memory_id: str, text: str) -> MemoryRecord: ...
@@ -65,6 +67,9 @@ class DisabledMemoryStore:
         assistant_message: str,
         conversation_id: str,
     ) -> None:
+        return None
+
+    async def remember_fact(self, user_id: str, fact: str, conversation_id: str) -> None:
         return None
 
     async def list_memories(self, user_id: str, limit: int = 100) -> list[MemoryRecord]:
@@ -145,6 +150,25 @@ class Mem0MemoryStore:
                 raise MemoryServiceError("长期记忆服务初始化失败。") from error
         return self._client
 
+    def _reset_client(self) -> None:
+        with self._client_lock:
+            self._client = None
+
+    async def _call(self, method: str, *args: Any, **kwargs: Any) -> Any:
+        last_error: Exception | None = None
+        for attempt in range(2):
+            try:
+                client = self._get_client()
+                return await asyncio.to_thread(getattr(client, method), *args, **kwargs)
+            except TypeError:
+                raise
+            except Exception as error:
+                last_error = error
+                if attempt == 0:
+                    self._reset_client()
+        assert last_error is not None
+        raise last_error
+
     @staticmethod
     def _records(payload: Any) -> list[MemoryRecord]:
         items = payload.get("results", []) if isinstance(payload, dict) else payload
@@ -171,8 +195,8 @@ class Mem0MemoryStore:
 
     async def search(self, user_id: str, query: str, limit: int) -> list[MemoryRecord]:
         try:
-            payload = await asyncio.to_thread(
-                self._get_client().search,
+            payload = await self._call(
+                "search",
                 query=query,
                 filters={"user_id": user_id},
                 top_k=limit,
@@ -193,8 +217,8 @@ class Mem0MemoryStore:
             {"role": "assistant", "content": assistant_message},
         ]
         try:
-            await asyncio.to_thread(
-                self._get_client().add,
+            await self._call(
+                "add",
                 messages,
                 user_id=user_id,
                 metadata={"conversation_id": conversation_id, "source": "liko_chat"},
@@ -202,24 +226,35 @@ class Mem0MemoryStore:
         except Exception as error:
             raise MemoryServiceError("长期记忆写入失败。") from error
 
+    async def remember_fact(self, user_id: str, fact: str, conversation_id: str) -> None:
+        try:
+            await self._call(
+                "add",
+                fact,
+                user_id=user_id,
+                metadata={"conversation_id": conversation_id, "source": "liko_explicit_profile"},
+                infer=False,
+            )
+        except Exception as error:
+            raise MemoryServiceError("长期记忆写入失败。") from error
+
     async def list_memories(self, user_id: str, limit: int = 100) -> list[MemoryRecord]:
         try:
-            client = self._get_client()
             try:
-                payload = await asyncio.to_thread(
-                    client.get_all,
+                payload = await self._call(
+                    "get_all",
                     filters={"user_id": user_id},
                     top_k=limit,
                 )
             except TypeError:
-                payload = await asyncio.to_thread(client.get_all, user_id=user_id)
+                payload = await self._call("get_all", user_id=user_id)
         except Exception as error:
             raise MemoryServiceError("长期记忆读取失败。") from error
         return self._records(payload)
 
     async def _owned_memory(self, user_id: str, memory_id: str) -> MemoryRecord:
         try:
-            payload = await asyncio.to_thread(self._get_client().get, memory_id)
+            payload = await self._call("get", memory_id)
         except Exception as error:
             raise MemoryServiceError("长期记忆读取失败。") from error
         if not isinstance(payload, dict) or payload.get("user_id") != user_id:
@@ -232,7 +267,7 @@ class Mem0MemoryStore:
     async def update_memory(self, user_id: str, memory_id: str, text: str) -> MemoryRecord:
         await self._owned_memory(user_id, memory_id)
         try:
-            await asyncio.to_thread(self._get_client().update, memory_id, text)
+            await self._call("update", memory_id, text)
         except Exception as error:
             raise MemoryServiceError("长期记忆更新失败。") from error
         return MemoryRecord(id=memory_id, text=text)
@@ -240,13 +275,13 @@ class Mem0MemoryStore:
     async def delete_memory(self, user_id: str, memory_id: str) -> None:
         await self._owned_memory(user_id, memory_id)
         try:
-            await asyncio.to_thread(self._get_client().delete, memory_id)
+            await self._call("delete", memory_id)
         except Exception as error:
             raise MemoryServiceError("长期记忆删除失败。") from error
 
     async def delete_all(self, user_id: str) -> None:
         try:
-            await asyncio.to_thread(self._get_client().delete_all, user_id=user_id)
+            await self._call("delete_all", user_id=user_id)
         except Exception as error:
             raise MemoryServiceError("长期记忆清空失败。") from error
 
