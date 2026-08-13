@@ -13,6 +13,7 @@
 - `POST /api/auth/recover`：使用一次性恢复码重设密码，并换发新的恢复码。
 - `PATCH /api/auth/memory-consent`：开启或关闭长期记忆。
 - `PATCH /api/auth/liko-colors`：登录用户使用注册赠送的一次机会确认外壳色与肤色；确认后由服务端锁定，未来换色需道具系统重新授权。
+- `GET /api/recommendations`：返回近 7 天匿名聚合后的校园高频问题；样本不足时自动补充固定常用问题。
 - `POST /api/chat/stream`：使用 SSE 返回 `meta`、`delta`、`sources`、`done` 或 `error`。FastGPT 配置完整时代理真实问答，并兼容从工作流汇总事件恢复未进入标准文本流的最终答案；否则返回明确的联调占位提示。
 - `POST /api/answers/{answerId}/feedback`：校验反馈格式。数据库未接入前返回 `not_persisted`，不会假装保存成功。
 - `GET /api/users/me/liko`：返回当前账号正式编号、年龄与固定配色；游客不生成编号。
@@ -20,6 +21,9 @@
 - `PATCH /api/users/me/memories/{memoryId}`：修改自己的单条记忆。
 - `DELETE /api/users/me/memories/{memoryId}`：删除自己的单条记忆。
 - `DELETE /api/users/me/memories`：清空自己的长期记忆。
+- `GET /api/users/me/conversations`：列出当前登录用户保存的对话。
+- `GET /api/users/me/conversations/{conversationId}/messages`：读取当前用户某次对话的完整消息与来源。
+- `DELETE /api/users/me/conversations/{conversationId}`：删除当前用户自己的整次对话；不能读取或删除其他用户的数据。
 
 ## 本地启动
 
@@ -68,7 +72,7 @@ FastGPT 管理后台中的应用配置分为调试草稿和 API 使用的已发�
 - 独立 PostgreSQL + PgVector 保存不同用户的记忆，集合名默认为 `liko_memories`。
 - 本地 `backend/data/` 只保存 Mem0 的修改历史文件，已被 Git 忽略。
 
-Mem0 与校园知识库职责分离：Mem0 只存“关于用户的了解”，FastGPT 继续负责深圳大学事实检索。FastGPT 工作流后续需要新增 `memory_context` 文本变量，并在角色提示词中明确它只是用户背景、不能作为校园事实来源。
+Mem0 与校园知识库职责分离：Mem0 只存“关于用户的了解”，FastGPT 继续负责深圳大学事实检索。FastGPT 工作流已发布 `memory_context` 文本变量，并在角色提示词中明确它只是用户背景、不能作为校园事实来源。姓名等结构明确的资料会先写入用户专属记忆；用户询问自己的姓名时由后端确定性读取，不再交给校园 RAG 猜测或附加无关来源。
 
 知识工厂发布的 Liko 表达规则通过 `style_context` 文本变量进入 FastGPT。FastGPT 应用需要预先创建该变量并在角色提示词引用；后端环境变量 `LIKO_STYLE_FILE` 指向服务器上 `知识工厂/data/liko_style.json`。后端只读取 `published_prompt`，草稿不会影响线上问答；如果文件缺失则保持现有 FastGPT 提示词，不会导致问答中断。
 
@@ -103,7 +107,7 @@ cd backend
 
 - 第一版只使用账号密码，不使用手机号、邮箱或验证码；忘记密码依赖注册时的一次性恢复码。
 - 当前自动建表适合首次部署；正式公开上线前仍需引入数据库迁移版本管理。
-- Mem0 适配器与记忆管理接口已有测试覆盖；测试服务器已安装 Mem0 OSS 并部署独立 PgVector，模型密钥尚未配置，因此服务仍未启用。
+- Mem0 适配器、确定性姓名记忆和记忆管理接口已有测试覆盖；测试服务器已安装 Mem0 OSS、独立 PgVector 并安全配置模型服务，真实验收已通过，服务已启用。
 - 已有 FastGPT 上游代理、标准回答流与工作流最终答案兼容、连接/读取超时和安全错误转换；尚未实现自动重试、用户主动停止和限流。
 - 没有保存完整用户问题正文的日志。
 - Liko 状态轮换仍保存在浏览器，尚未服务端同步；编号和颜色已经由数据库持久化。
@@ -128,6 +132,8 @@ cd backend
 
 2026-08-12 已部署游客随机配色与注册首次选色：新注册账号可确认一次外壳色和肤色，确认后服务端返回冲突并阻止重复使用；升级前已有账号不自动补发。部署时已完成账号库备份和真实临时账号验收。
 
-同日已在 `/opt/liko/memory` 部署 Mem0 独立 PgVector 0.8.6，容器健康且仅监听 `127.0.0.1:5434`。服务器尚无 Mem0 所需的模型提供商密钥，因此未写入启用配置，健康检查仍应为 `memoryConfigured: false`；补齐密钥后必须运行 `python -m scripts.verify_memory`，通过真实写入、检索、隔离、修改和删除验收后才能标记为已启用。
+同日已在 `/opt/liko/memory` 部署 Mem0 独立 PgVector 0.8.6，容器健康且仅监听 `127.0.0.1:5434`。模型密钥随后已安全写入服务器环境并通过 `python -m scripts.verify_memory` 的真实写入、检索、隔离、修改和删除验收，健康检查返回 `memoryConfigured: true`。Mem0 本地配置目录通过 `MEM0_DIR` 指向后端可写的 `backend/data/.mem0`，避免 systemd 的主目录保护导致读取失败。
 
-2026-08-13 已部署手机端“Liko 对我的了解”页面，支持开关、查看、修改、单条删除和全部清空；同时允许用户在关闭长期记忆后继续管理旧内容。模型密钥仍未安全配置，页面入口会保持“尚未部署”状态，不能把仅有界面误记为长期记忆已经启用。
+2026-08-13 已部署手机端“Liko 对我的了解”页面，支持开关、查看、修改、单条删除和全部清空；同时允许用户在关闭长期记忆后继续管理旧内容。模型服务已启用，页面与聊天链路均完成真实临时账号验收。
+
+同日已部署登录用户对话持久化、逐条删除和近 7 天匿名热度推荐。推荐点击只按自然输入的 15% 计权，动态问题至少需要两个不同账号共同出现且必须属于可识别的校园主题；当前用户正文不会通过管理统计接口暴露。
