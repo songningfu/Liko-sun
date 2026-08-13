@@ -159,11 +159,18 @@ class Mem0MemoryStore:
             self._client = None
 
     def _safe_error(self, operation: str, error: Exception) -> None:
-        message = str(error)
+        parts: list[str] = []
+        current: Exception | None = error
+        seen: set[int] = set()
+        while current is not None and id(current) not in seen:
+            seen.add(id(current))
+            parts.append(f"{type(current).__name__}: {current}")
+            current = current.__cause__ or current.__context__
+        message = " <- ".join(parts)
         for secret in (self.settings.mem0_llm_api_key, self.settings.mem0_embedder_api_key):
             if secret:
                 message = message.replace(secret, "***")
-        LOGGER.warning("Mem0 %s failed (%s): %s", operation, type(error).__name__, message[:500])
+        LOGGER.warning("Mem0 %s failed: %s", operation, message[:1000])
 
     async def _call(self, method: str, *args: Any, **kwargs: Any) -> Any:
         last_error: Exception | None = None
