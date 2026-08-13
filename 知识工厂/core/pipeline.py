@@ -199,6 +199,12 @@ def _auto_publish_decision(doc: dict, *, model_required: bool) -> tuple[bool, st
         return False, "人工投递资料必须先审核"
     if doc.get("status") != "可导入" or not doc.get("official"):
         return False, "不是可直接采用的官方资料"
+    duplicate = doc.get("duplicate_check") or {}
+    if duplicate.get("status") != "unique":
+        return False, "与现有知识重复或相似，需要人工确认"
+    quality = doc.get("quality_check") or {}
+    if quality.get("status") != "passed":
+        return False, quality.get("reason") or "正文信息密度需要人工确认"
     if doc.get("trust_level") not in {"authoritative", "institutional"}:
         return False, "来源可信等级需要人工核验"
     if doc.get("risk") != "普通":
@@ -243,6 +249,9 @@ def auto_sync_documents(docs: list[dict], emit: Callable[[Event], None],
             "trustLevel": doc.get("trust_level", ""),
             "autoPublishEligible": eligible,
             "autoPublishReason": reason,
+            "duplicateStatus": (doc.get("duplicate_check") or {}).get("status", ""),
+            "duplicateScore": (doc.get("duplicate_check") or {}).get("score", 0),
+            "qualityStatus": (doc.get("quality_check") or {}).get("status", ""),
         }
         try:
             version = sync.stage(

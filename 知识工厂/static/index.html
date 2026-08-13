@@ -65,6 +65,7 @@
   .service strong { display:block; margin-bottom:7px; }
   .dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:var(--muted); }
   .dot.ok { background:var(--ok); } .dot.warn { background:var(--warn); }
+  .login-preview { display:none; max-width:720px; width:100%; margin-top:12px; border:1px solid var(--line); border-radius:12px; }
   @media (max-width: 760px) {
     header { align-items: flex-start; flex-wrap: wrap; padding: 12px; }
     nav { width: 100%; margin-left: 0; }
@@ -84,6 +85,7 @@
     <button data-page="sources">来源管理</button>
     <button data-page="inbox">资料收件箱</button>
     <button data-page="run">运行任务</button>
+    <button data-page="duplicates">重复检查</button>
     <button data-page="sync">FastGPT 同步</button>
     <button data-page="style">Liko 表达</button>
     <button data-page="exports">导出</button>
@@ -220,6 +222,21 @@
     <div class="panel"><h2>实时日志</h2><div id="log"></div></div>
   </section>
 
+  <!-- 重复检查 -->
+  <section class="page" id="page-duplicates">
+    <div class="panel">
+      <h2>知识重复检查</h2>
+      <p class="muted" style="margin-bottom:12px">同时比较首轮人工整理知识和后续自动采集内容。精确重复自动排除，相似内容进入复核；不按“通知、指南、规章”等文档类型限制收录。</p>
+      <div class="row"><button class="btn" id="duplicate-btn" onclick="runDuplicateCheck()">检查全部资料</button><span class="muted" id="duplicate-msg"></span></div>
+      <div class="cards" id="duplicate-cards"></div>
+    </div>
+    <div class="panel">
+      <h2>发现的重复或相似内容</h2>
+      <table><thead><tr><th>新资料</th><th>匹配到</th><th style="width:100px">结论</th><th style="width:90px">相似度</th></tr></thead><tbody id="duplicate-rows"></tbody></table>
+      <div class="empty" id="duplicate-empty">尚未发现重复，或还没有运行检查</div>
+    </div>
+  </section>
+
   <!-- FastGPT 同步 -->
   <section class="page" id="page-sync">
     <div class="panel">
@@ -276,12 +293,13 @@
   <section class="page" id="page-settings">
     <div class="panel">
       <h2>内网登录（统一身份认证）</h2>
-      <p class="muted" style="margin-bottom:10px">点击下方按钮会打开浏览器窗口，手动登录后关闭窗口即可保存会话。之后内网采集全自动；会话过期会提示重新登录。</p>
+      <p class="muted" style="margin-bottom:10px">点击生成二维码后，用企业微信扫码登录。账号密码不会经过 Liko 后台；成功后服务器保存登录会话，之后内网采集自动运行。</p>
       <div class="row">
         <input id="login-url" style="max-width:360px" placeholder="内网登录入口 URL">
-        <button class="btn" onclick="startLogin()">打开登录窗口</button>
+        <button class="btn" onclick="startLogin()">生成登录二维码</button>
         <span class="muted" id="login-status"></span>
       </div>
+      <img class="login-preview" id="login-preview" alt="深圳大学统一认证企业微信登录二维码">
     </div>
     <div class="panel">
       <h2>全站搜查频率</h2>
@@ -352,6 +370,7 @@ document.querySelectorAll("nav button").forEach(btn => {
     if (btn.dataset.page === "exports") loadExports();
     if (btn.dataset.page === "settings") loadSettings();
     if (btn.dataset.page === "run") loadCrawlStats();
+    if (btn.dataset.page === "duplicates") loadDuplicates();
     if (btn.dataset.page === "sync") loadSync();
     if (btn.dataset.page === "style") loadStyle();
   };
@@ -558,6 +577,36 @@ async function loadExports() {
     <td><a href="${adminUrl(`/api/exports/${x.name}`)}" download>下载</a></td></tr>`).join("");
 }
 
+function renderDuplicates(data) {
+  const s = data.summary || {};
+  $("duplicate-cards").innerHTML = [
+    [s.baseline_documents || 0, "已有基线文档"], [s.total || 0, "本次检查"],
+    [s.unique || 0, "无重复"], [s.near || 0, "相似待复核"], [s.exact || 0, "精确重复"],
+  ].map(([n,l]) => `<div class="card"><div class="num">${n}</div><div class="label">${l}</div></div>`).join("");
+  const rows = data.rows || [];
+  $("duplicate-empty").style.display = rows.length ? "none" : "block";
+  $("duplicate-rows").innerHTML = rows.map(row => `<tr>
+    <td><strong>${esc(row.title || row.source_id)}</strong><div class="muted">${esc(row.source_id)}</div></td>
+    <td>${esc(row.matched_title)}<div class="src-url">${row.matched_url ? `<a href="${esc(row.matched_url)}" target="_blank" rel="noreferrer">${esc(row.matched_url)}</a>` : esc(row.matched_id)}</div></td>
+    <td><span class="tag ${row.status === "exact_duplicate" ? "failed" : "pending"}">${row.status === "exact_duplicate" ? "精确重复" : "相似待复核"}</span></td>
+    <td>${Math.round((row.score || 0) * 100)}%</td></tr>`).join("");
+}
+
+async function loadDuplicates() {
+  renderDuplicates(await api("/api/duplicates"));
+}
+
+async function runDuplicateCheck() {
+  $("duplicate-btn").disabled = true;
+  $("duplicate-msg").textContent = "正在比较已有知识和全部采集资料…";
+  try {
+    const data = await api("/api/duplicates/check", {method:"POST"});
+    renderDuplicates(data);
+    $("duplicate-msg").textContent = `检查完成：${data.summary?.exact || 0} 篇精确重复，${data.summary?.near || 0} 篇相似待复核`;
+  } catch (error) { $("duplicate-msg").textContent = error.message; }
+  finally { $("duplicate-btn").disabled = false; }
+}
+
 async function loadSettings() {
   const s = await api("/api/settings");
   $("sched-enabled").checked = s.schedule_enabled;
@@ -572,6 +621,8 @@ async function loadSettings() {
   $("auto-publish").checked = s.auto_publish_enabled;
   const st = await api("/api/internal/status");
   $("login-status").textContent = st.has_session ? `会话已保存；${st.message || ""}` : (st.message || "未登录");
+  $("login-preview").style.display = st.preview_available ? "block" : "none";
+  if (st.preview_available) $("login-preview").src = adminUrl(`/api/internal/preview?t=${Date.now()}`);
 }
 
 async function saveSettings() {
@@ -590,10 +641,12 @@ async function startLogin() {
   await api("/api/settings", { method: "PATCH", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ internal_login_url: $("login-url").value }) });
   await api("/api/internal/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-  $("login-status").textContent = "浏览器已打开，请登录后关闭窗口…";
+  $("login-status").textContent = "登录二维码准备中…";
   const timer = setInterval(async () => {
     const st = await api("/api/internal/status");
     $("login-status").textContent = st.message || "";
+    $("login-preview").style.display = st.preview_available ? "block" : "none";
+    if (st.preview_available) $("login-preview").src = adminUrl(`/api/internal/preview?t=${Date.now()}`);
     if (st.state === "done" || st.state === "error") { clearInterval(timer); loadSettings(); }
   }, 2000);
 }
@@ -645,7 +698,13 @@ async function loadSync() {
   $("integration-status").innerHTML = `<strong>FastGPT：</strong>${status.fastgpt.configured ? `已连接（知识库尾号 ${esc(status.fastgpt.dataset_id_tail)}）` : "未配置"}<br><strong>知识加工模型：</strong>${status.enrichment_model.configured ? `已配置 ${esc(status.enrichment_model.model)}` : "未配置（仍可正常保存和审核原文）"}`;
   const rows = await api("/api/fastgpt/versions");
   $("sync-empty").style.display = rows.length ? "none" : "block";
-  $("sync-rows").innerHTML = rows.map(v => `<tr><td>${esc(v.source_id)}</td><td>${esc(v.title)}<div class="muted">${esc(v.collection_id)}</div></td><td><span class="tag ${v.status === "published" ? "ok" : v.status === "failed" ? "failed" : "pending"}">${esc({staged:"已暂存",published:"线上版本",superseded:"历史版本",failed:"暂存失败"}[v.status] || v.status)}</span><div class="muted">${v.chunks || 0} 块</div></td><td class="muted">${esc((v.published_at || v.staged_at || "").replace("T", " "))}</td><td>${v.status === "staged" ? `<button class="btn small" onclick="promoteSync('${v.source_id}','${v.collection_id}')">审核并发布</button>` : ""}${v.status === "published" ? `<button class="btn small ghost" onclick="rollbackSync('${v.source_id}')">回滚</button>` : ""}</td></tr>`).join("");
+  $("sync-rows").innerHTML = rows.map(v => {
+    const metadata = v.metadata || {};
+    const source = metadata.sourceUrl ? `<div class="src-url"><a href="${esc(metadata.sourceUrl)}" target="_blank" rel="noreferrer">查看原文</a></div>` : "";
+    const reason = metadata.autoPublishReason ? `<div class="muted">${esc(metadata.autoPublishReason)}</div>` : "";
+    const statusLabel = {staged:"已暂存",published:"线上版本",superseded:"历史版本",failed:"暂存失败",held:"相似待复核"}[v.status] || v.status;
+    return `<tr><td>${esc(v.source_id)}</td><td>${esc(v.title)}<div class="muted">${esc(v.collection_id)}</div>${source}${reason}</td><td><span class="tag ${v.status === "published" ? "ok" : v.status === "failed" ? "failed" : "pending"}">${esc(statusLabel)}</span><div class="muted">${v.chunks || 0} 块</div></td><td class="muted">${esc((v.published_at || v.staged_at || "").replace("T", " "))}</td><td>${v.status === "staged" ? `<button class="btn small" onclick="promoteSync('${v.source_id}','${v.collection_id}')">审核并发布</button>` : ""}${v.status === "published" ? `<button class="btn small ghost" onclick="rollbackSync('${v.source_id}')">回滚</button>` : ""}</td></tr>`;
+  }).join("");
 }
 
 async function stageSync() {

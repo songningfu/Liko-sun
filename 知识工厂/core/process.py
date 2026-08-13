@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 from pathlib import Path
+
+from .duplicates import analyze_documents
 
 FACTORY_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = FACTORY_ROOT.parent
@@ -48,8 +51,6 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
     """
     docs = []
     line_freq = rag.document_line_frequencies(page_files)
-    seen_hashes: dict[str, str] = {}  # hash -> doc_id，本批内去重
-
     for index, path in enumerate(page_files, 1):
         text = path.read_text(encoding="utf-8", errors="replace")
         meta, body = rag.parse_frontmatter(text)
@@ -94,21 +95,31 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
             "freshness": doc.freshness,
             "content_hash": doc.content_hash,
             "char_count": len(plain),
+            "_doc": doc,
         }
 
         if len(plain) < 60:
             result.update(status="技术排除", reason="清洗后有效正文过短", chunks=0)
-        elif doc.content_hash in seen_hashes:
-            result.update(status="重复排除", reason=f"与 {seen_hashes[doc.content_hash]} 正文相同", chunks=0)
         elif not is_official:
             doc.chunks = rag.chunk_markdown(doc)
-            seen_hashes[doc.content_hash] = doc_id
             result.update(status="待核验", reason="非官方来源（公众号），人工核验后才能进入知识库",
                           chunks=len(doc.chunks))
         else:
             doc.chunks = rag.chunk_markdown(doc)
-            seen_hashes[doc.content_hash] = doc_id
             result.update(status="可导入", reason="官方来源，已完成清洗", chunks=len(doc.chunks))
+
+        # 不限制“通知/指南/规章”等文档类型，只拦截几乎只有菜单链接的低信息密度页面。
+        link_lines = len(re.findall(r"(?m)^\s*[-*+]\s+\[[^]]+]\([^)]+\)", doc.clean_body))
+        text_lines = len([line for line in doc.clean_body.splitlines() if len(rag.normalize_line(line)) >= 12])
+        link_ratio = link_lines / text_lines if text_lines else 0.0
+        navigation_heavy = text_lines >= 8 and link_ratio > 0.75 and len(plain) < 1200
+        result["quality_check"] = {
+            "status": "review" if navigation_heavy else "passed",
+            "link_ratio": round(link_ratio, 3),
+            "reason": "页面以菜单或链接列表为主，需要确认是否有独立知识价值" if navigation_heavy else "正文信息密度正常",
+        }
+        if navigation_heavy and result["status"] not in {"技术排除", "重复排除"}:
+            result.update(status="待核验", reason=result["quality_check"]["reason"])
 
         # 高风险字段沿用项目规则，只打标签不拦截
         if any(term in text_for_classification for term in rag.HIGH_RISK_TERMS):
@@ -116,8 +127,18 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
         else:
             result["risk"] = "普通"
 
+        docs.append(result)
+
+    # 与首轮人工整理知识、以及同批自动采集页面一起检查精确与近似重复。
+    analyze_documents(docs)
+
+    for result in docs:
+        source_id = result["source_id"]
+        doc = result["_doc"]
+        is_official = result["official"]
+        trust_level = result["trust_level"]
+        clean_path = CLEAN_ROOT / f"{source_id}.md"
         if result["status"] in {"可导入", "待核验"}:
-            clean_path = CLEAN_ROOT / f"{source_id}.md"
             header = [
                 "---",
                 f"doc_id: {doc_id}",
@@ -138,7 +159,6 @@ def process_pages(rag, page_files: list[Path]) -> list[dict]:
             clean_path.parent.mkdir(parents=True, exist_ok=True)
             clean_path.write_text("\n".join(header) + doc.clean_body.strip() + "\n", encoding="utf-8")
             result["clean_path"] = str(clean_path.relative_to(FACTORY_ROOT))
-            result["_doc"] = doc  # 导出阶段使用
-
-        docs.append(result)
+        elif clean_path.exists():
+            clean_path.unlink()
     return docs

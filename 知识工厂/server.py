@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Streamin
 from pydantic import BaseModel
 
 from core import internal_fetch, settings
+from core.duplicates import REPORT_FILE
 from core.admin_auth import AdminConfig, AdminSessionManager, SESSION_SECONDS
 from core.crawler import STATE_FILE as CRAWL_STATE_FILE, add_site, load_sites
 from core.enrichment import KnowledgeEnricher
@@ -510,6 +511,9 @@ def fastgpt_stage(payload: SyncStageIn) -> dict:
                 "sourceId": payload.source_id,
                 "sourceUrl": doc.get("url", ""),
                 "trustLevel": doc.get("trust_level", ""),
+                "duplicateStatus": (doc.get("duplicate_check") or {}).get("status", ""),
+                "duplicateScore": (doc.get("duplicate_check") or {}).get("score", 0),
+                "qualityStatus": (doc.get("quality_check") or {}).get("status", ""),
             },
         )
     except RuntimeError as exc:
@@ -616,6 +620,46 @@ def internal_login(payload: LoginIn) -> dict:
 @app.get("/api/internal/status")
 def internal_status() -> dict:
     return internal_fetch.login_status()
+
+
+@app.get("/api/internal/preview")
+def internal_preview() -> FileResponse:
+    if not internal_fetch.LOGIN_PREVIEW.exists():
+        raise HTTPException(status_code=404, detail="登录二维码尚未生成或已经失效")
+    return FileResponse(internal_fetch.LOGIN_PREVIEW, media_type="image/png")
+
+
+@app.get("/api/duplicates")
+def duplicate_report() -> dict:
+    if not REPORT_FILE.exists():
+        return {"summary": {"total": 0, "unique": 0, "near": 0, "exact": 0, "baseline_documents": 0}, "rows": []}
+    try:
+        return json.loads(REPORT_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {"summary": {"total": 0, "unique": 0, "near": 0, "exact": 0, "baseline_documents": 0}, "rows": []}
+
+
+@app.post("/api/duplicates/check")
+def run_duplicate_check() -> dict:
+    rag = load_rag_module()
+    pages = sorted(PAGES_ROOT.glob("*.md"))
+    if not pages:
+        return duplicate_report()
+    docs = process_pages(rag, pages)
+    report = duplicate_report()
+    report["documents"] = [
+        {
+            "source_id": item.get("source_id"),
+            "title": item.get("title"),
+            "url": item.get("url"),
+            "status": item.get("status"),
+            "reason": item.get("reason"),
+            "quality_check": item.get("quality_check"),
+            "duplicate_check": item.get("duplicate_check"),
+        }
+        for item in docs
+    ]
+    return report
 
 
 # ---------- 定时调度 ----------
