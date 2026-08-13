@@ -24,6 +24,16 @@ class Settings(BaseSettings):
     user_daily_limit: int = Field(default=50, ge=1, le=10000)
     admin_api_token: str | None = Field(default=None, repr=False)
 
+    attachment_dir: str = "data/chat-attachments"
+    attachment_ttl_hours: int = Field(default=24, ge=1, le=168)
+    attachment_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=25 * 1024 * 1024)
+    attachment_max_text_chars: int = Field(default=16000, ge=1000, le=50000)
+    vision_enabled: bool = False
+    vision_base_url: str = "https://api.siliconflow.cn/v1"
+    vision_api_key: str | None = Field(default=None, repr=False)
+    vision_model: str = "Qwen/Qwen3.6-35B-A3B"
+    vision_timeout_seconds: float = Field(default=60, ge=5, le=180)
+
     memory_enabled: bool = False
     mem0_llm_provider: str = "openai"
     mem0_llm_model: str = "deepseek-v4-flash"
@@ -87,6 +97,16 @@ class Settings(BaseSettings):
             and self.mem0_embedder_api_key
             and self.mem0_postgres_url
         )
+
+    @property
+    def effective_vision_api_key(self) -> str | None:
+        """Allow one SiliconFlow key to serve embeddings and optional vision."""
+
+        return self.vision_api_key or self.mem0_embedder_api_key
+
+    @property
+    def vision_configured(self) -> bool:
+        return bool(self.vision_enabled and self.effective_vision_api_key and self.vision_model)
 
 
 @lru_cache

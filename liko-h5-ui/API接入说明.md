@@ -80,6 +80,15 @@
 - `GET /api/users/me/conversations` 列出自己的对话，`GET /api/users/me/conversations/{conversationId}/messages` 读取消息，`DELETE /api/users/me/conversations/{conversationId}` 删除整次对话。
 - 所有记录接口必须从 HttpOnly 会话识别用户并在服务端检查归属，不能接受前端自报的 `userId`。
 
+## 文件与图片附件
+
+- H5 先用 `multipart/form-data` 调用 `POST /api/chat/attachments`，得到短期附件 ID；随后把最多 3 个 ID 放入聊天请求的 `attachmentIds`。不能把模型密钥或用户 ID 放进上传请求。
+- 文档在自有后端解析为文字，图片由单独的视觉模型提取文字与客观描述，再作为本轮参考资料进入 FastGPT。当前文本模型不直接接收图片。
+- 单个附件默认最大 10 MB。原始文件只在请求内存中处理，不落盘；提取结果默认 24 小时过期，发送成功后前端调用删除接口提前清理。
+- 对话记录只保存附件名称和类型，不保存附件正文。长期记忆也只处理用户当前问题和回答，不自动把整份附件写入 Mem0。
+- 用户附件不是深圳大学官方来源。若回答依赖附件必须明确说明，校园政策仍应以 FastGPT 返回的深大官方 HTTPS 来源为准。
+- FastGPT OpenAPI 自身不接收二进制文件，只接受已上传后的 URL；Liko 当前在自有后端先完成解析，因此不需要公开附件 URL。[FastGPT 文件输入说明](https://doc.fastgpt.io/zh-CN/docs/introduction/guide/course/fileInput)、[FastGPT 对话接口](https://doc.fastgpt.io/zh-CN/openapi/chat)。
+
 ## Liko 配色
 
 - 游客不生成正式编号，页面每次打开时在完整 sRGB 色域随机外壳色和肤色，并避开难以分辨的组合。

@@ -35,6 +35,7 @@ def test_conversation_history_is_user_owned_and_deletable() -> None:
         user_id=user_id,
         role="user",
         content="我叫什么？",
+        attachments_json=json.dumps([{"name": "课程表.pdf", "kind": "document"}], ensure_ascii=False),
         source_type="input",
     )
     database.add_chat_message(
@@ -63,6 +64,7 @@ def test_conversation_history_is_user_owned_and_deletable() -> None:
     assert listed.status_code == 200
     assert listed.json()[0]["messageCount"] == 2
     assert [item["role"] for item in messages.json()] == ["user", "assistant"]
+    assert messages.json()[0]["attachments"] == [{"name": "课程表.pdf", "kind": "document"}]
     assert deleted.status_code == 204
     assert missing.status_code == 404
 

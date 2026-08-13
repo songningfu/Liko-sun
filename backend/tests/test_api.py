@@ -3,6 +3,7 @@ import json
 from fastapi.testclient import TestClient
 
 from app.auth import CurrentUser, get_current_user
+from app.attachments import AttachmentRecord
 from app.config import Settings, get_settings
 from app.fastgpt import FastGPTEvent
 from app.main import (
@@ -10,6 +11,7 @@ from app.main import (
     _explicit_profile_fact,
     _name_from_memories,
     app,
+    get_attachment_processor,
     get_fastgpt_client,
 )
 from app.memory import MemoryRecord, get_memory_store
@@ -36,6 +38,7 @@ def test_health_reports_unconfigured_integrations() -> None:
         "databaseConfigured": False,
         "authConfigured": False,
         "memoryConfigured": False,
+        "visionConfigured": False,
     }
     assert response.headers["cache-control"] == "no-store"
 
@@ -109,6 +112,66 @@ def test_chat_stream_proxies_configured_fastgpt_events() -> None:
         item.get("finishReason") == "stop" and item.get("canRate") is True
         for item in event_data
     )
+
+
+def test_chat_attachment_content_is_added_only_to_current_model_message() -> None:
+    record = AttachmentRecord(
+        id="a" * 32,
+        owner_hash="opaque-owner",
+        name="课程安排.pdf",
+        kind="document",
+        mime_type="application/pdf",
+        size=120,
+        extracted_text="课程考试安排在周五下午。",
+        created_at="2026-08-13T00:00:00+00:00",
+        expires_at="2026-08-14T00:00:00+00:00",
+    )
+
+    class FakeAttachmentProcessor:
+        def resolve(self, attachment_ids, owner_hash):
+            assert attachment_ids == [record.id]
+            assert len(owner_hash) == 64
+            return [record]
+
+        def build_context(self, records):
+            assert records == [record]
+            return "附件参考：课程考试安排在周五下午。"
+
+    class FakeFastGPTClient:
+        async def stream_chat(self, **kwargs):
+            assert kwargs["message"].startswith("帮我确认考试时间")
+            assert "附件参考：课程考试安排在周五下午。" in kwargs["message"]
+            yield FastGPTEvent(event="delta", data={"text": "考试安排在周五下午。"})
+
+    configured = Settings(
+        _env_file=None,
+        fastgpt_base_url="https://rag.example.com/api",
+        fastgpt_api_key="test-only-key",
+        fastgpt_app_id="app_test",
+        session_secret="test-session-secret-at-least-thirty-two-characters",
+    )
+    app.dependency_overrides[get_settings] = lambda: configured
+    app.dependency_overrides[get_fastgpt_client] = lambda: FakeFastGPTClient()
+    app.dependency_overrides[get_attachment_processor] = lambda: FakeAttachmentProcessor()
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="user_123",
+        authenticated=True,
+        memory_consent=False,
+    )
+    try:
+        response = client.post(
+            "/api/chat/stream",
+            json={
+                "requestId": "request-file-01",
+                "message": "帮我确认考试时间",
+                "attachmentIds": [record.id],
+            },
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert any(item.get("text") == "考试安排在周五下午。" for item in parse_sse_data(response.text))
 
 
 def test_guest_chat_never_reads_or_writes_long_term_memory() -> None:

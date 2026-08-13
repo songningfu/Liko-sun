@@ -8,12 +8,25 @@ import secrets
 from typing import Annotated
 from uuid import uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 
-from .auth import CurrentUser, get_current_user
+from .attachments import (
+    AttachmentNotFoundError,
+    AttachmentProcessor,
+    AttachmentServiceError,
+    AttachmentTooLargeError,
+)
+from .auth import (
+    GUEST_COOKIE,
+    CurrentUser,
+    create_guest_token,
+    get_current_user,
+    private_hash,
+    valid_guest_token,
+)
 from .auth_routes import auth_payload, router as auth_router
 from .config import Settings, get_settings
 from .database import Database, get_database, utc_now
@@ -28,6 +41,8 @@ from .memory import (
 from .quota import QuotaStatus, consume_chat_quota
 from .schemas import (
     ChatRequest,
+    AttachmentSummary,
+    AttachmentUploadResponse,
     ConversationMessageResponse,
     ConversationSummaryResponse,
     FeedbackRequest,
@@ -59,6 +74,48 @@ def get_fastgpt_client(
     config: Annotated[Settings, Depends(get_settings)],
 ) -> FastGPTClient:
     return FastGPTClient(config)
+
+
+def get_attachment_processor(
+    config: Annotated[Settings, Depends(get_settings)],
+) -> AttachmentProcessor:
+    return AttachmentProcessor(config)
+
+
+def _attachment_owner_hash(
+    request: Request,
+    response: Response | None,
+    current_user: CurrentUser,
+    config: Settings,
+    *,
+    create_guest: bool,
+) -> str:
+    if not config.session_secret:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="附件服务尚未配置。",
+        )
+    if current_user.authenticated and current_user.user_id:
+        identity = f"user:{current_user.user_id}"
+    else:
+        signed_token = request.cookies.get(GUEST_COOKIE)
+        guest_id = valid_guest_token(signed_token, config.session_secret)
+        if not guest_id and create_guest and response is not None:
+            signed_token = create_guest_token(config.session_secret)
+            guest_id = valid_guest_token(signed_token, config.session_secret)
+            response.set_cookie(
+                GUEST_COOKIE,
+                signed_token,
+                max_age=365 * 24 * 60 * 60,
+                httponly=True,
+                secure=config.secure_cookies,
+                samesite="lax",
+                path="/",
+            )
+        if not guest_id:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="附件会话已经失效，请重新上传。")
+        identity = f"guest:{guest_id}"
+    return private_hash(f"attachment:{identity}", config.session_secret)
 
 
 DEFAULT_RECOMMENDATIONS = [
@@ -212,8 +269,71 @@ async def health(config: Annotated[Settings, Depends(get_settings)]) -> dict:
             "databaseConfigured": config.database_configured,
             "authConfigured": config.auth_configured,
             "memoryConfigured": config.memory_configured,
+            "visionConfigured": config.vision_configured,
         },
     }
+
+
+@app.post("/api/chat/attachments", response_model=AttachmentUploadResponse)
+async def upload_chat_attachment(
+    request: Request,
+    response: Response,
+    file: Annotated[UploadFile, File(...)],
+    config: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    processor: Annotated[AttachmentProcessor, Depends(get_attachment_processor)],
+) -> AttachmentUploadResponse:
+    owner_hash = _attachment_owner_hash(
+        request,
+        response,
+        current_user,
+        config,
+        create_guest=True,
+    )
+    try:
+        data = await file.read(config.attachment_max_bytes + 1)
+        record = await processor.save(
+            owner_hash=owner_hash,
+            filename=file.filename or "附件",
+            content_type=file.content_type,
+            data=data,
+        )
+    except AttachmentTooLargeError as error:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=str(error)) from error
+    except AttachmentServiceError as error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    finally:
+        await file.close()
+    return AttachmentUploadResponse(
+        id=record.id,
+        name=record.name,
+        kind=record.kind,
+        size=record.size,
+        preview=record.preview,
+        expiresAt=record.expires_at,
+    )
+
+
+@app.delete("/api/chat/attachments/{attachment_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_chat_attachment(
+    attachment_id: str,
+    request: Request,
+    config: Annotated[Settings, Depends(get_settings)],
+    current_user: Annotated[CurrentUser, Depends(get_current_user)],
+    processor: Annotated[AttachmentProcessor, Depends(get_attachment_processor)],
+) -> Response:
+    owner_hash = _attachment_owner_hash(
+        request,
+        None,
+        current_user,
+        config,
+        create_guest=False,
+    )
+    try:
+        processor.delete(attachment_id, owner_hash)
+    except AttachmentNotFoundError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @app.get("/api/recommendations", response_model=list[RecommendationItemResponse])
@@ -271,12 +391,14 @@ async def admin_summary(
 @app.post("/api/chat/stream", response_class=EventSourceResponse)
 async def chat_stream(
     payload: ChatRequest,
+    request: Request,
     config: Annotated[Settings, Depends(get_settings)],
     fastgpt: Annotated[FastGPTClient, Depends(get_fastgpt_client)],
     current_user: Annotated[CurrentUser, Depends(get_current_user)],
     memory_store: Annotated[LongTermMemoryStore, Depends(get_memory_store)],
     quota: Annotated[QuotaStatus, Depends(consume_chat_quota)],
     database: Annotated[Database | None, Depends(get_database)],
+    attachment_processor: Annotated[AttachmentProcessor, Depends(get_attachment_processor)],
 ) -> AsyncIterable[ServerSentEvent]:
     """Expose the frontend streaming contract without fabricating a campus answer."""
 
@@ -284,6 +406,26 @@ async def chat_stream(
     conversation_id = payload.conversation_id or (
         f"chat_{uuid4().hex}" if current_user.authenticated else f"guest_{uuid4().hex}"
     )
+    attachments = []
+    if payload.attachment_ids:
+        owner_hash = _attachment_owner_hash(
+            request,
+            None,
+            current_user,
+            config,
+            create_guest=False,
+        )
+        try:
+            attachments = attachment_processor.resolve(payload.attachment_ids, owner_hash)
+        except AttachmentNotFoundError as error:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+        except AttachmentServiceError as error:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
+    attachment_context = attachment_processor.build_context(attachments)
+    model_message = payload.message
+    if attachment_context:
+        model_message = f"{payload.message}\n\n{attachment_context}"
+    attachment_summaries = [{"name": item.name, "kind": item.kind} for item in attachments]
     if current_user.authenticated and current_user.user_id and database:
         try:
             database.ensure_conversation(
@@ -304,6 +446,7 @@ async def chat_stream(
             user_id=current_user.user_id,
             role="user",
             content=payload.message,
+            attachments_json=json.dumps(attachment_summaries, ensure_ascii=False),
             source_type=payload.source,
         )
     memory_active = current_user.can_use_long_term_memory and memory_store.configured
@@ -403,7 +546,7 @@ async def chat_stream(
     answer_parts: list[str] = []
     try:
         async for upstream_event in fastgpt.stream_chat(
-            message=payload.message,
+            message=model_message,
             conversation_id=conversation_id,
             answer_id=answer_id,
             campus=payload.campus,
@@ -518,6 +661,15 @@ async def conversation_messages(
             sources = [SourceItem.model_validate(item) for item in raw_sources if isinstance(item, dict)]
         except (json.JSONDecodeError, ValueError, TypeError):
             sources = []
+        try:
+            raw_attachments = json.loads(message.attachments_json or "[]")
+            attachments = [
+                AttachmentSummary.model_validate(item)
+                for item in raw_attachments
+                if isinstance(item, dict)
+            ]
+        except (json.JSONDecodeError, ValueError, TypeError):
+            attachments = []
         result.append(
             ConversationMessageResponse(
                 id=message.id,
@@ -525,6 +677,7 @@ async def conversation_messages(
                 content=message.content,
                 answerId=message.answer_id,
                 sources=sources,
+                attachments=attachments,
                 createdAt=message.created_at.isoformat(),
             )
         )

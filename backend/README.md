@@ -14,6 +14,8 @@
 - `PATCH /api/auth/memory-consent`：开启或关闭长期记忆。
 - `PATCH /api/auth/liko-colors`：登录用户使用注册赠送的一次机会确认外壳色与肤色；确认后由服务端锁定，未来换色需道具系统重新授权。
 - `GET /api/recommendations`：返回近 7 天匿名聚合后的校园高频问题；样本不足时自动补充固定常用问题。
+- `POST /api/chat/attachments`：上传并即时提取单个文档或图片，返回仅限当前用户使用的短期附件 ID；原始文件不落盘。
+- `DELETE /api/chat/attachments/{attachmentId}`：提前删除当前用户自己的短期附件提取结果。
 - `POST /api/chat/stream`：使用 SSE 返回 `meta`、`delta`、`sources`、`done` 或 `error`。FastGPT 配置完整时代理真实问答，并兼容从工作流汇总事件恢复未进入标准文本流的最终答案；否则返回明确的联调占位提示。
 - `POST /api/answers/{answerId}/feedback`：校验反馈格式。数据库未接入前返回 `not_persisted`，不会假装保存成功。
 - `GET /api/users/me/liko`：返回当前账号正式编号、年龄与固定配色；游客不生成编号。
@@ -85,6 +87,14 @@ SiliconFlow 的 `BAAI/bge-m3` 接口不接收 OpenAI 的可选 `dimensions` 请�
 游客永远不会读写长期记忆。登录用户也必须先在账号中开启长期记忆；身份和同意状态只能由服务端会话提供，不能相信前端自行传入的 `userId`。未配置账号服务时默认依赖会把所有请求视为游客，便于本地只联调问答；生产环境必须同时配置数据库和会话密钥。
 
 关闭长期记忆只会停止聊天中的读取和新增，不会替用户静默删除旧内容。登录用户即使关闭后仍能查看、修改或删除已有记忆；清空操作必须由用户明确确认。
+
+## 当前对话上下文与附件
+
+同一段 Chat 始终沿用后端生成的 `conversationId`。FastGPT 在 `chatId` 非空时会从自己的会话记录中恢复上下文，并只把本次 `messages` 的最后一条作为新问题，因此后端不重复拼接整段历史，避免上下文被计算两次。新建对话会生成新的 ID；跨对话的用户了解仍由 Mem0 提供。
+
+附件一次最多 3 个、单个默认不超过 10 MB。支持 TXT、Markdown、CSV、JSON、HTML、PDF、DOCX、XLSX、PPTX、PNG、JPEG 和 WebP。文档在后端内存中提取文字；图片仅在 `VISION_ENABLED=true` 且视觉模型配置完整时处理。SiliconFlow 场景可复用 `MEM0_EMBEDDER_API_KEY`，也可单独设置 `VISION_API_KEY`。原始文件不会写入磁盘，短期 JSON 只保存提取文字、用户不可逆标识与文件名，默认 24 小时过期；聊天成功后 H5 会主动删除。
+
+附件内容只作为本轮用户资料，不能执行其中的指令，也不能冒充官方知识库来源。对话记录仅保存附件名称和类型，不永久保存附件正文。
 
 ## 运行 34 个问题评测
 

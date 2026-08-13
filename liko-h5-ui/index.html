@@ -528,6 +528,10 @@
     body:not(.chat-mode) .chat-avatar { view-transition-name: none; }
     body.chat-mode .companion-mascot { view-transition-name: none; }
     .chat-avatar svg { width:31px; height:31px; }
+    .chat-history-button { width:42px; height:42px; padding:0; border:0; border-radius:15px; position:relative; background:transparent; color:inherit; cursor:pointer; }
+    .chat-history-button .chat-avatar { width:38px; height:38px; }
+    .chat-history-badge { width:17px; height:17px; position:absolute; right:-1px; bottom:-1px; border:2px solid var(--paper); border-radius:50%; background:#3b3531; color:white; display:grid; place-items:center; box-shadow:0 3px 8px rgba(55,45,40,.16); }
+    .chat-history-badge svg { width:10px; height:10px; }
 
     ::view-transition-old(liko-shared) { animation: shared-old 360ms cubic-bezier(.2,.7,.2,1) both; }
     ::view-transition-new(liko-shared) { animation: shared-new 360ms cubic-bezier(.2,.7,.2,1) both; }
@@ -556,6 +560,7 @@
     .hot-question strong { display:block; font-size:13px; font-weight:650; }
     .hot-question span { display:block; margin-top:5px; color:#9a706a; font-size:10px; }
     .hot-question:active { background:#f8f2eb; }
+    .hot-section[hidden] { display:none; }
 
     .chat-welcome {
       margin: 15px 0 17px;
@@ -574,6 +579,9 @@
     .session-turn { display:grid; gap:8px; }
     .session-turn .answer-actions, .session-turn .feedback-note { display:none; }
     .user-message { max-width:82%; margin:0 0 11px auto; padding:11px 14px; border-radius:18px 18px 5px 18px; background:#3b3531; color:white; font-size:14px; line-height:1.55; }
+    .message-attachments { margin-top:7px; display:flex; flex-wrap:wrap; gap:5px; }
+    .message-attachment { max-width:100%; padding:4px 7px; border-radius:8px; background:rgba(255,255,255,.13); display:inline-flex; align-items:center; gap:4px; font-size:9px; color:rgba(255,255,255,.84); }
+    .message-attachment svg { width:11px; height:11px; flex:none; }
 
     .answer-card {
       padding: 17px 16px 13px;
@@ -636,9 +644,27 @@
     }
 
     .composer-dock.is-hidden { display:none; }
-    .composer { min-height:52px; padding:5px 6px 5px 15px; border:1px solid rgba(89,71,62,.13); border-radius:18px; background:#fffefa; box-shadow:0 10px 26px rgba(65,52,45,.08); display:flex; align-items:center; gap:8px; }
+    .attachment-tray { display:none; margin:0 0 7px; padding:0 2px; gap:6px; overflow-x:auto; scrollbar-width:none; }
+    .attachment-tray::-webkit-scrollbar { display:none; }
+    .attachment-tray.has-items { display:flex; }
+    .attachment-chip { max-width:210px; min-height:34px; padding:6px 7px 6px 9px; border:1px solid var(--line); border-radius:12px; background:#fffefa; display:flex; align-items:center; gap:7px; box-shadow:0 5px 14px rgba(65,52,45,.05); flex:none; }
+    .attachment-chip-icon { width:23px; height:23px; border-radius:8px; background:#f3ece4; color:#756b64; display:grid; place-items:center; flex:none; }
+    .attachment-chip-icon svg { width:13px; height:13px; }
+    .attachment-chip-copy { min-width:0; }
+    .attachment-chip-copy strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
+    .attachment-chip-copy span { display:block; margin-top:1px; color:var(--muted); font-size:8px; }
+    .attachment-chip.is-uploading .attachment-chip-icon { animation:attachment-pulse 900ms ease-in-out infinite alternate; }
+    .attachment-chip.is-error { border-color:#e8b7b5; background:#fff8f6; }
+    @keyframes attachment-pulse { to { opacity:.45; transform:scale(.9); } }
+    .attachment-remove { width:24px; height:24px; padding:0; border:0; border-radius:8px; background:transparent; color:#8e8580; display:grid; place-items:center; cursor:pointer; flex:none; }
+    .attachment-remove svg { width:12px; height:12px; }
+    .composer { min-height:52px; padding:5px 6px; border:1px solid rgba(89,71,62,.13); border-radius:18px; background:#fffefa; box-shadow:0 10px 26px rgba(65,52,45,.08); display:flex; align-items:center; gap:5px; }
     .composer input { width:100%; min-width:0; height:40px; padding:0; border:0; outline:0; background:transparent; color:var(--ink); font-size:16px; }
     .composer input::placeholder { color:#aaa19a; }
+    .attach-button { width:40px; height:40px; padding:0; border:0; border-radius:13px; background:transparent; color:#746c66; display:grid; place-items:center; cursor:pointer; flex:none; }
+    .attach-button:active { background:#f4eee7; }
+    .attach-button svg { width:20px; height:20px; }
+    .attach-button:disabled { opacity:.42; cursor:wait; }
     .send-button { width:42px; height:42px; padding:0; border:0; border-radius:14px; background:var(--berry); color:white; display:grid; place-items:center; cursor:pointer; flex:none; box-shadow:0 7px 14px rgba(211,70,83,.2); }
     .send-button svg { width:19px; height:19px; }
 
@@ -730,6 +756,13 @@
     .history-item-main span { display:block; margin-top:5px; color:var(--muted); font-size:10px; line-height:1.55; }
     .history-item-meta { margin-top:10px; display:flex; align-items:center; justify-content:space-between; color:#9a918a; font-size:9px; }
     .history-delete { min-height:30px; padding:0 10px; border:1px solid var(--line); border-radius:10px; background:#f5efe8; color:#b04e58; font-size:10px; cursor:pointer; }
+    #historySheet { justify-content:flex-end; }
+    .chat-history-panel { width:min(89%,380px); min-height:100dvh; border-left:1px solid rgba(226,211,198,.8); box-shadow:-18px 0 50px rgba(44,35,30,.12); animation:history-in 240ms cubic-bezier(.2,.72,.2,1); }
+    @keyframes history-in { from { transform:translateX(32px); opacity:.55; } to { transform:translateX(0); opacity:1; } }
+    .history-new { width:38px; height:38px; padding:0; border:0; border-radius:13px; background:#3b3531; color:white; display:grid; place-items:center; cursor:pointer; }
+    .history-new svg { width:18px; height:18px; }
+    .history-item.is-current { border-color:#d8bbb2; background:linear-gradient(145deg,#fffafa,#f7f0e8); box-shadow:0 7px 18px rgba(83,57,48,.05); }
+    .history-context-note { margin:0 2px 13px; padding:11px 12px; border-radius:15px; background:#f3ede6; color:#766c65; font-size:10px; line-height:1.6; }
 
     /* 底部导航 */
     .bottom-nav {
@@ -979,9 +1012,10 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
           </button>
           <div class="chat-title"><strong>问 Liko</strong><span>校园里的事，慢慢问</span></div>
-          <div class="chat-avatar" aria-hidden="true">
-            <svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg>
-          </div>
+          <button class="chat-history-button" id="chatHistoryAction" type="button" aria-label="打开对话记录">
+            <span class="chat-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg></span>
+            <span class="chat-history-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span>
+          </button>
         </header>
 
         <section class="chat-welcome" id="chatWelcome" aria-live="polite">
@@ -993,7 +1027,7 @@
           <span class="chat-welcome-note" id="chatGreetingNote">当前只保留本次会话</span>
         </section>
 
-        <section class="hot-section" aria-label="高频问题推荐">
+        <section class="hot-section" id="hotSection" aria-label="高频问题推荐">
           <div class="section-heading"><strong>最近大家都在问</strong><span id="recommendationNote">结合近 7 天真实提问排序</span></div>
           <div class="hot-grid" id="hotGrid">
             <button class="hot-question" type="button" data-question="丽湖校区图书馆几点关门？"><strong>图书馆几点关门？</strong><span>今日更新 · 学习资源</span></button>
@@ -1049,7 +1083,6 @@
         <button class="setting-row" id="colorChoiceAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/><path d="M8.5 15c2.4 1.8 4.6 1.8 7 0"/></svg></span>Liko 配色</span><span class="setting-side" id="colorChoiceSide">注册后可选一次 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/></svg></span>个人资料</span><span class="setting-side">未完善 ›</span></button>
         <button class="setting-row" id="changePasswordAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>修改密码</span><span class="setting-side">登录后可用 ›</span></button>
-        <button class="setting-row" id="conversationHistoryAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side" id="conversationHistorySide">登录后保存 ›</span></button>
         <button class="setting-row" id="memoryConsentAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-4.6 7A4 4 0 0 0 9 17.7V21l3-2 3 2v-3.3A4 4 0 0 0 16.6 10 5 5 0 0 0 12 3Z"/><path d="M9.5 10.5h5M10.5 13.5h3"/></svg></span>Liko 对我的了解</span><span class="setting-side" id="memoryConsentSide">登录后开启 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 2.7 7.7 7 10 4.3-2.3 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>偏好与隐私</span><span class="setting-side">›</span></button>
       </section>
@@ -1059,7 +1092,10 @@
     </section>
 
     <div class="composer-dock is-hidden" id="composerDock">
+      <div class="attachment-tray" id="attachmentTray" aria-live="polite"></div>
       <form class="composer" id="questionForm">
+        <input class="visually-hidden" id="attachmentInput" type="file" multiple accept=".txt,.md,.csv,.json,.html,.pdf,.docx,.xlsx,.pptx,image/png,image/jpeg,image/webp" />
+        <button class="attach-button" id="attachButton" type="button" aria-label="添加文件或图片"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m20.5 11.5-8.9 8.9a6 6 0 0 1-8.5-8.5l9.6-9.6a4 4 0 1 1 5.7 5.7l-9.7 9.7a2 2 0 0 1-2.8-2.8l8.9-8.9"/></svg></button>
         <label class="visually-hidden" for="questionInput">输入校园问题</label>
         <input id="questionInput" type="text" maxlength="120" autocomplete="off" placeholder="问问校历、办事、宿舍…" />
         <button class="send-button" id="sendQuestion" type="submit" aria-label="发送问题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 14-7-4 14-3-6-7-1Z"/><path d="m12 13 7-8"/></svg></button>
@@ -1142,13 +1178,14 @@
   </div>
 
   <div class="memory-sheet" id="historySheet" role="dialog" aria-modal="true" aria-labelledby="historyTitle">
-    <section class="memory-panel">
+    <section class="memory-panel chat-history-panel">
       <header class="memory-header">
-        <button class="memory-back" id="closeHistory" type="button" aria-label="返回我的"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
-        <div class="memory-heading"><strong id="historyTitle">对话记录</strong><span>登录账号自动保存，你可以随时删除</span></div>
-        <span></span>
+        <button class="memory-back" id="closeHistory" type="button" aria-label="返回聊天"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div class="memory-heading"><strong id="historyTitle">和 Liko 聊过的</strong><span>在这里接着聊，或重新开始</span></div>
+        <button class="history-new" id="newConversation" type="button" aria-label="开始新对话"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
       </header>
       <div class="memory-body">
+        <p class="history-context-note">同一段对话会保留上下文；新建对话不会带入旧聊天，但已开启的长期记忆仍会帮助 Liko 了解你。</p>
         <div class="memory-list-head"><strong>最近对话</strong><span id="historyCount">读取中…</span></div>
         <div class="history-list" id="historyList" aria-live="polite"><div class="memory-empty">正在读取对话…</div></div>
       </div>
@@ -1180,6 +1217,10 @@
       const historyList = document.getElementById('historyList');
       const sessionHistory = document.getElementById('sessionHistory');
       const hotGrid = document.getElementById('hotGrid');
+      const hotSection = document.getElementById('hotSection');
+      const attachmentTray = document.getElementById('attachmentTray');
+      const attachmentInput = document.getElementById('attachmentInput');
+      const attachButton = document.getElementById('attachButton');
       const localApiOrigin = ['127.0.0.1', 'localhost'].includes(location.hostname) ? 'http://127.0.0.1:8001' : '';
       const API_BASE = window.LIKO_API_BASE ?? localApiOrigin;
       let currentPage = 'liko';
@@ -1188,9 +1229,13 @@
       let activeRequest;
       let currentAnswerId = null;
       let conversationId = null;
+      let currentQuestionText = '';
+      let currentTurnAttachments = [];
+      let pendingAttachments = [];
+      let isAnswering = false;
       let authMode = 'login';
       let authState = {authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}};
-      let systemState = {memoryConfigured:false};
+      let systemState = {memoryConfigured:false, visionConfigured:false};
       let currentMemories = [];
 
       const randomHexColor = () => `#${Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0').toUpperCase()}`;
@@ -1221,10 +1266,11 @@
       const guestPalette = paletteFromPair(randomColorPair());
 
       const apiRequest = async (path, options = {}) => {
+        const formBody = typeof FormData !== 'undefined' && options.body instanceof FormData;
         const response = await fetch(`${API_BASE}${path}`, {
           ...options,
           credentials:'include',
-          headers: options.body ? {'Content-Type':'application/json', ...(options.headers || {})} : options.headers
+          headers: options.body && !formBody ? {'Content-Type':'application/json', ...(options.headers || {})} : options.headers
         });
         if (!response.ok) {
           let detail = '操作失败，请稍后再试';
@@ -1265,7 +1311,6 @@
           : !systemState.memoryConfigured
             ? '尚未部署 ›'
             : state.user.memoryConsent ? '已开启 ›' : '已关闭 ›';
-        document.getElementById('conversationHistorySide').textContent = state.authenticated ? '已自动保存 ›' : '登录后保存 ›';
         document.querySelector('#changePasswordAction .setting-side').textContent = state.authenticated ? '›' : '登录后可用 ›';
         const quota = state.quota || authState.quota;
         if (quota) document.getElementById('quotaCopy').textContent = `${state.authenticated ? '登录用户' : '游客'}今日剩余 ${quota.remaining} / ${quota.limit} 次`;
@@ -1310,7 +1355,9 @@
         }
         const name = authState.user?.username || '你';
         chatGreeting.textContent = `${period}，${name}。今天想从哪件事开始？`;
-        chatGreetingNote.textContent = systemState.memoryConfigured && authState.user?.memoryConsent ? '长期记忆已开启' : '当前只保留本次会话';
+        chatGreetingNote.textContent = systemState.memoryConfigured && authState.user?.memoryConsent
+          ? '对话自动保存 · 长期记忆已开启'
+          : '登录账号 · 对话自动保存';
         if (!systemState.memoryConfigured || !authState.user?.memoryConsent) return;
         try {
           const memories = await apiRequest('/api/users/me/memories?limit=1');
@@ -1456,12 +1503,29 @@
         return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('zh-CN', {month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit'});
       };
 
+      const appendAttachmentBadges = (target, attachments = []) => {
+        if (!attachments.length) return;
+        const list = document.createElement('span');
+        list.className = 'message-attachments';
+        attachments.forEach(item => {
+          const badge = document.createElement('span');
+          badge.className = 'message-attachment';
+          badge.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m20.5 11.5-8.9 8.9a6 6 0 0 1-8.5-8.5l9.6-9.6a4 4 0 1 1 5.7 5.7l-9.7 9.7a2 2 0 0 1-2.8-2.8l8.9-8.9"/></svg>';
+          const name = document.createElement('span');
+          name.textContent = item.name;
+          badge.append(name);
+          list.append(badge);
+        });
+        target.append(list);
+      };
+
       const storedTurn = (question, assistant) => {
         const turn = document.createElement('section');
         turn.className = 'session-turn';
         const user = document.createElement('div');
         user.className = 'user-message';
         user.textContent = question.content;
+        appendAttachmentBadges(user, question.attachments);
         const card = document.createElement('article');
         card.className = 'answer-card';
         const head = document.createElement('header');
@@ -1497,10 +1561,13 @@
             sessionHistory.append(storedTurn(messages[index], assistant));
           }
           conversationId = item.id;
+          currentQuestionText = '';
+          currentTurnAttachments = [];
           conversation.hidden = true;
           document.getElementById('questionText').textContent = '';
           answerBody.innerHTML = '';
           chatWelcome.hidden = true;
+          hotSection.hidden = true;
           historySheet.classList.remove('is-open');
           switchPage('liko');
           setChatMode(true);
@@ -1519,7 +1586,7 @@
           }
           items.forEach(item => {
             const card = document.createElement('article');
-            card.className = 'history-item';
+            card.className = `history-item${conversationId === item.id ? ' is-current' : ''}`;
             const main = document.createElement('button');
             main.type = 'button';
             main.className = 'history-item-main';
@@ -1543,9 +1610,12 @@
                 await apiRequest(`/api/users/me/conversations/${encodeURIComponent(item.id)}`, {method:'DELETE'});
                 if (conversationId === item.id) {
                   conversationId = null;
+                  currentQuestionText = '';
+                  currentTurnAttachments = [];
                   sessionHistory.replaceChildren();
                   conversation.hidden = true;
                   chatWelcome.hidden = false;
+                  hotSection.hidden = false;
                 }
                 await loadConversationHistory();
                 showToast('这段对话已删除');
@@ -1590,6 +1660,7 @@
             apiRequest('/api/health').catch(() => null)
           ]);
           systemState.memoryConfigured = Boolean(health?.integrations?.memoryConfigured);
+          systemState.visionConfigured = Boolean(health?.integrations?.visionConfigured);
           renderAccount(state);
           await refreshGreeting();
         }
@@ -1670,15 +1741,36 @@
         finally { submit.disabled = false; }
       });
       document.getElementById('logoutAction').addEventListener('click', async () => {
-        try { await apiRequest('/api/auth/logout', {method:'POST'}); renderAccount({authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}}); await refreshAccount(); showToast('已退出登录'); }
+        try { await apiRequest('/api/auth/logout', {method:'POST'}); renderAccount({authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}}); await startNewConversation(); await refreshAccount(); showToast('已退出登录'); }
         catch (error) { showToast(error.message); }
       });
       document.getElementById('memoryConsentAction').addEventListener('click', openMemoryManager);
-      document.getElementById('conversationHistoryAction').addEventListener('click', async () => {
+      const startNewConversation = async () => {
+        activeRequest?.abort();
+        conversationId = null;
+        currentAnswerId = null;
+        currentQuestionText = '';
+        currentTurnAttachments = [];
+        sessionHistory.replaceChildren();
+        conversation.hidden = true;
+        document.getElementById('questionText').textContent = '';
+        answerBody.innerHTML = '';
+        chatWelcome.hidden = false;
+        hotSection.hidden = false;
+        await clearPendingAttachments(true);
+        historySheet.classList.remove('is-open');
+        switchPage('liko');
+        setChatMode(true);
+        await refreshGreeting();
+        document.getElementById('questionInput').value = '';
+        document.getElementById('questionInput').focus();
+      };
+      document.getElementById('chatHistoryAction').addEventListener('click', async () => {
         if (!authState.authenticated) { openAuth(); return; }
         historySheet.classList.add('is-open');
         await loadConversationHistory();
       });
+      document.getElementById('newConversation').addEventListener('click', startNewConversation);
       document.getElementById('closeHistory').addEventListener('click', () => historySheet.classList.remove('is-open'));
       historySheet.addEventListener('click', event => { if (event.target === historySheet) historySheet.classList.remove('is-open'); });
       document.getElementById('closeMemory').addEventListener('click', async () => {
@@ -2008,14 +2100,105 @@
         return `web_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       };
 
+      const attachmentIcon = kind => kind === 'image'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="m5 18 5-5 3 3 2-2 4 4"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>';
+
+      const renderAttachmentTray = () => {
+        attachmentTray.replaceChildren();
+        attachmentTray.classList.toggle('has-items', Boolean(pendingAttachments.length));
+        pendingAttachments.forEach(item => {
+          const chip = document.createElement('div');
+          chip.className = `attachment-chip is-${item.status}`;
+          const icon = document.createElement('span');
+          icon.className = 'attachment-chip-icon';
+          icon.innerHTML = attachmentIcon(item.kind);
+          const copy = document.createElement('span');
+          copy.className = 'attachment-chip-copy';
+          const title = document.createElement('strong');
+          title.textContent = item.name;
+          const statusText = document.createElement('span');
+          statusText.textContent = item.status === 'uploading' ? '正在读取…' : item.status === 'ready' ? '已加入本轮' : '读取失败';
+          copy.append(title, statusText);
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'attachment-remove';
+          remove.setAttribute('aria-label', `移除 ${item.name}`);
+          remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="m7 7 10 10M17 7 7 17"/></svg>';
+          remove.addEventListener('click', () => removePendingAttachment(item.localId, true));
+          chip.append(icon, copy, remove);
+          attachmentTray.append(chip);
+        });
+        const uploading = pendingAttachments.some(item => item.status === 'uploading');
+        attachButton.disabled = isAnswering || uploading || pendingAttachments.length >= 3;
+        sendQuestion.disabled = isAnswering || uploading;
+      };
+
+      const removePendingAttachment = async (localId, removeRemote) => {
+        const item = pendingAttachments.find(candidate => candidate.localId === localId);
+        pendingAttachments = pendingAttachments.filter(candidate => candidate.localId !== localId);
+        renderAttachmentTray();
+        if (removeRemote && item?.id) {
+          try { await apiRequest(`/api/chat/attachments/${encodeURIComponent(item.id)}`, {method:'DELETE'}); }
+          catch {}
+        }
+      };
+
+      const clearPendingAttachments = async removeRemote => {
+        const items = pendingAttachments;
+        pendingAttachments = [];
+        renderAttachmentTray();
+        if (removeRemote) {
+          await Promise.allSettled(items.filter(item => item.id).map(item =>
+            apiRequest(`/api/chat/attachments/${encodeURIComponent(item.id)}`, {method:'DELETE'})
+          ));
+        }
+      };
+
+      const uploadAttachment = async file => {
+        if (pendingAttachments.length >= 3) { showToast('一次最多添加 3 个附件'); return; }
+        if (file.size > 10 * 1024 * 1024) { showToast('单个附件不能超过 10 MB'); return; }
+        const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+        if (isImage && !systemState.visionConfigured) { showToast('图片理解服务正在准备中，暂时可以上传文档'); return; }
+        const item = {
+          localId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}_${Math.random()}`,
+          id: null,
+          name: file.name,
+          kind: isImage ? 'image' : 'document',
+          status: 'uploading'
+        };
+        pendingAttachments.push(item);
+        renderAttachmentTray();
+        const form = new FormData();
+        form.append('file', file, file.name);
+        try {
+          const result = await apiRequest('/api/chat/attachments', {method:'POST', body:form});
+          item.id = result.id;
+          item.name = result.name;
+          item.kind = result.kind;
+          item.status = 'ready';
+        } catch (error) {
+          item.status = 'error';
+          showToast(error.message);
+        } finally { renderAttachmentTray(); }
+      };
+
+      attachButton.addEventListener('click', () => attachmentInput.click());
+      attachmentInput.addEventListener('change', async () => {
+        const files = [...attachmentInput.files].slice(0, Math.max(0, 3 - pendingAttachments.length));
+        attachmentInput.value = '';
+        for (const file of files) await uploadAttachment(file);
+      });
+
       const archiveCurrentTurn = () => {
-        const question = document.getElementById('questionText').textContent.trim();
+        const question = currentQuestionText.trim();
         if (conversation.hidden || !question) return;
         const turn = document.createElement('section');
         turn.className = 'session-turn';
         const user = document.createElement('div');
         user.className = 'user-message';
         user.textContent = question;
+        appendAttachmentBadges(user, currentTurnAttachments);
         const card = document.getElementById('answerCard').cloneNode(true);
         card.querySelectorAll('[id]').forEach(node => node.removeAttribute('id'));
         card.querySelector('.answer-actions')?.remove();
@@ -2024,14 +2207,20 @@
         sessionHistory.append(turn);
       };
 
-      const useQuestion = async (question, source = 'input') => {
+      const useQuestion = async (question, source = 'input', attachments = pendingAttachments.filter(item => item.status === 'ready')) => {
         activeRequest?.abort();
         archiveCurrentTurn();
         const requestController = new AbortController();
         activeRequest = requestController;
+        isAnswering = true;
         chatWelcome.hidden = true;
+        hotSection.hidden = true;
         conversation.hidden = false;
-        document.getElementById('questionText').textContent = question;
+        currentQuestionText = question;
+        currentTurnAttachments = attachments.map(item => ({name:item.name, kind:item.kind}));
+        const questionNode = document.getElementById('questionText');
+        questionNode.textContent = question;
+        appendAttachmentBadges(questionNode, currentTurnAttachments);
         document.getElementById('questionInput').value = '';
         document.getElementById('answerNote').textContent = '正在连接校园知识库…';
         answerBody.innerHTML = '';
@@ -2039,7 +2228,7 @@
         currentAnswerId = null;
         clearSources();
         setFeedbackAvailable(false);
-        sendQuestion.disabled = true;
+        renderAttachmentTray();
         document.getElementById('conversation').scrollIntoView({behavior:'smooth',block:'start'});
         try {
           const response = await fetch(`${API_BASE}/api/chat/stream`, {
@@ -2049,12 +2238,14 @@
               requestId: createRequestId(),
               conversationId,
               message: question,
-              source
+              source,
+              attachmentIds: attachments.map(item => item.id)
             }),
             credentials:'include',
             signal: requestController.signal
           });
           await consumeEventStream(response);
+          await clearPendingAttachments(true);
         } catch (error) {
           if (error.name === 'AbortError') return;
           document.getElementById('answerNote').textContent = error.isBusinessError ? '知识库暂时不可用' : '连接失败';
@@ -2062,7 +2253,8 @@
           answerTime.textContent = '刚刚 · 未生成校园答案';
           showToast('问答服务暂时不可用');
         } finally {
-          sendQuestion.disabled = false;
+          isAnswering = false;
+          renderAttachmentTray();
           if (activeRequest === requestController) activeRequest = null;
         }
       };
@@ -2074,9 +2266,12 @@
       document.getElementById('questionForm').addEventListener('submit', event => {
         event.preventDefault();
         const input = document.getElementById('questionInput');
-        const question = input.value.trim();
+        const readyAttachments = pendingAttachments.filter(item => item.status === 'ready');
+        const question = input.value.trim() || (readyAttachments.length ? '请帮我看看这些附件。' : '');
         if (!question) { showToast('先写下你想问的问题'); input.focus(); return; }
-        useQuestion(question);
+        if (pendingAttachments.some(item => item.status === 'uploading')) { showToast('附件还在读取，请稍等'); return; }
+        if (pendingAttachments.some(item => item.status === 'error')) { showToast('请先移除读取失败的附件'); return; }
+        useQuestion(question, 'input', readyAttachments);
       });
 
       document.querySelectorAll('.demo-link').forEach(link => link.addEventListener('click', event => { event.preventDefault(); showToast('接入知识库后会打开官方原文'); }));

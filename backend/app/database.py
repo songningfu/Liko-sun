@@ -78,6 +78,7 @@ class ChatMessage(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     answer_id: Mapped[str | None] = mapped_column(String(100), index=True)
     sources_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
+    attachments_json: Mapped[str] = mapped_column(Text, default="[]", nullable=False)
     source_type: Mapped[str | None] = mapped_column(String(24))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, nullable=False, index=True)
 
@@ -104,20 +105,25 @@ class Database:
     def _apply_compatible_schema_updates(self) -> None:
         """Apply small additive updates until versioned migrations are introduced."""
 
-        user_columns = {column["name"] for column in inspect(self.engine).get_columns("users")}
-        if "color_choice_available" in user_columns:
-            return
-        boolean_default = "0" if self.engine.dialect.name == "sqlite" else "FALSE"
+        inspector = inspect(self.engine)
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        message_columns = {column["name"] for column in inspector.get_columns("chat_messages")}
         with self.engine.begin() as connection:
-            connection.execute(
-                text(
-                    "ALTER TABLE users ADD COLUMN color_choice_available "
-                    f"BOOLEAN NOT NULL DEFAULT {boolean_default}"
-                )
-            )
-            if self.engine.dialect.name == "postgresql":
+            if "color_choice_available" not in user_columns:
+                boolean_default = "0" if self.engine.dialect.name == "sqlite" else "FALSE"
                 connection.execute(
-                    text("ALTER TABLE users ALTER COLUMN color_choice_available SET DEFAULT TRUE")
+                    text(
+                        "ALTER TABLE users ADD COLUMN color_choice_available "
+                        f"BOOLEAN NOT NULL DEFAULT {boolean_default}"
+                    )
+                )
+                if self.engine.dialect.name == "postgresql":
+                    connection.execute(
+                        text("ALTER TABLE users ALTER COLUMN color_choice_available SET DEFAULT TRUE")
+                    )
+            if "attachments_json" not in message_columns:
+                connection.execute(
+                    text("ALTER TABLE chat_messages ADD COLUMN attachments_json TEXT NOT NULL DEFAULT '[]'")
                 )
 
     def session(self) -> Session:
@@ -245,6 +251,7 @@ class Database:
         content: str,
         answer_id: str | None = None,
         sources_json: str = "[]",
+        attachments_json: str = "[]",
         source_type: str | None = None,
     ) -> None:
         with self.session() as db, db.begin():
@@ -260,6 +267,7 @@ class Database:
                     content=content,
                     answer_id=answer_id,
                     sources_json=sources_json,
+                    attachments_json=attachments_json,
                     source_type=source_type,
                 )
             )

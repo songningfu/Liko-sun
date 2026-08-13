@@ -1,3 +1,4 @@
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
@@ -43,6 +44,7 @@ class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=1000)
     campus: Literal["粤海", "丽湖", "通用"] | None = None
     source: Literal["input", "recommendation"] = "input"
+    attachment_ids: list[str] = Field(default_factory=list, alias="attachmentIds", max_length=3)
 
     @field_validator("message")
     @classmethod
@@ -51,6 +53,16 @@ class ChatRequest(BaseModel):
         if not value:
             raise ValueError("message cannot be blank")
         return value
+
+    @field_validator("attachment_ids")
+    @classmethod
+    def validate_attachment_ids(cls, values: list[str]) -> list[str]:
+        if len(values) != len(set(values)):
+            raise ValueError("attachmentIds cannot contain duplicates")
+        for value in values:
+            if not re.fullmatch(r"[0-9a-f]{32}", value):
+                raise ValueError("invalid attachment id")
+        return values
 
     model_config = {"populate_by_name": True}
 
@@ -119,12 +131,27 @@ class ConversationSummaryResponse(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class AttachmentSummary(BaseModel):
+    name: str
+    kind: Literal["document", "image"]
+
+
+class AttachmentUploadResponse(AttachmentSummary):
+    id: str
+    size: int
+    preview: str
+    expires_at: str = Field(alias="expiresAt")
+
+    model_config = {"populate_by_name": True}
+
+
 class ConversationMessageResponse(BaseModel):
     id: str
     role: Literal["user", "assistant"]
     content: str
     answer_id: str | None = Field(default=None, alias="answerId")
     sources: list[SourceItem] = Field(default_factory=list)
+    attachments: list[AttachmentSummary] = Field(default_factory=list)
     created_at: str = Field(alias="createdAt")
 
     model_config = {"populate_by_name": True}
