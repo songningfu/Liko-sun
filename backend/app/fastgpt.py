@@ -13,6 +13,23 @@ from .schemas import SourceItem
 
 
 OFFICIAL_URL_PATTERN = re.compile(r"https://[^\s<>()\]\[\"']+", re.IGNORECASE)
+SOURCE_TOPIC_GROUPS = (
+    frozenset({"图书馆", "图书", "书库", "阅览", "自修", "借阅", "还书"}),
+    frozenset({"校园卡", "一卡通", "补卡", "挂失", "卡务"}),
+    frozenset({"校园网", "无线网", "网络", "wifi", "上网"}),
+    frozenset({"校历", "放假", "开学", "寒假", "暑假", "学期"}),
+    frozenset({"宿舍", "寝室", "入住", "退宿", "水电"}),
+    frozenset({"食堂", "餐厅", "用餐", "就餐"}),
+    frozenset({"校车", "通勤", "班车", "发车"}),
+    frozenset({"选课", "学分", "成绩", "考试", "教务", "学籍"}),
+    frozenset({"新生", "报到", "招生", "录取"}),
+    frozenset({"医院", "门诊", "医保", "健康"}),
+    frozenset({"学费", "缴费", "奖学金", "助学金", "财务"}),
+    frozenset({"体育馆", "运动场", "游泳馆"}),
+)
+GENERIC_SOURCE_GRAMS = frozenset(
+    {"深圳", "大学", "深大", "校园", "校区", "学生", "关于", "通知", "服务", "信息", "相关", "工作"}
+)
 
 
 class FastGPTUpstreamError(RuntimeError):
@@ -66,12 +83,90 @@ def _source_title(quote: dict[str, Any], url: str) -> str:
     return urlparse(url).hostname or "深圳大学官方来源"
 
 
-def extract_official_sources(flow_responses: Any) -> list[SourceItem]:
+def _source_search_text(quote: dict[str, Any]) -> str:
+    return "\n".join(
+        value
+        for key in ("title", "q", "a", "sourceName", "source", "department")
+        if isinstance((value := quote.get(key)), str)
+    ).lower()
+
+
+def _relevance_terms(value: str) -> set[str]:
+    terms: set[str] = set()
+    for token in re.findall(r"[a-z0-9]{2,}|[\u3400-\u9fff]+", value.lower()):
+        if re.fullmatch(r"[\u3400-\u9fff]+", token):
+            terms.update(token[index : index + 2] for index in range(len(token) - 1))
+        else:
+            terms.add(token)
+    for group in SOURCE_TOPIC_GROUPS:
+        terms.update(keyword for keyword in group if keyword in value.lower())
+    return terms - GENERIC_SOURCE_GRAMS
+
+
+def _topic_indexes(value: str) -> set[int]:
+    lowered = value.lower()
+    return {
+        index
+        for index, keywords in enumerate(SOURCE_TOPIC_GROUPS)
+        if any(keyword in lowered for keyword in keywords)
+    }
+
+
+def _is_relevant_source(quote: dict[str, Any], relevance_text: str) -> bool:
+    if not relevance_text.strip():
+        return True
+    source_text = _source_search_text(quote)
+    context_topics = _topic_indexes(relevance_text)
+    source_topics = _topic_indexes(source_text)
+    if context_topics and not context_topics.intersection(source_topics):
+        return False
+    overlap = _relevance_terms(relevance_text).intersection(_relevance_terms(source_text))
+    return bool(overlap) if context_topics else len(overlap) >= 2
+
+
+def filter_source_items(
+    items: list[SourceItem | dict[str, Any]], relevance_text: str
+) -> list[SourceItem]:
+    """Apply a final label-level guard to live and previously saved sources."""
+    context_topics = _topic_indexes(relevance_text)
+    context_terms = _relevance_terms(relevance_text)
+    filtered: list[SourceItem] = []
+    seen_urls: set[str] = set()
+    seen_titles: set[str] = set()
+    for raw_item in items:
+        try:
+            item = raw_item if isinstance(raw_item, SourceItem) else SourceItem.model_validate(raw_item)
+        except (TypeError, ValueError):
+            continue
+        title_key = re.sub(r"\W+", "", item.title.lower())
+        if item.url in seen_urls or (title_key and title_key in seen_titles):
+            continue
+        label_text = "\n".join(
+            part for part in (item.title, item.department or "", urlparse(item.url).path) if part
+        )
+        label_topics = _topic_indexes(label_text)
+        label_overlap = context_terms.intersection(_relevance_terms(label_text))
+        if context_topics:
+            if label_topics and not context_topics.intersection(label_topics):
+                continue
+            if not label_topics and not label_overlap:
+                continue
+        elif relevance_text.strip() and len(label_overlap) < 2:
+            continue
+        seen_urls.add(item.url)
+        if title_key:
+            seen_titles.add(title_key)
+        filtered.append(item)
+    return filtered
+
+
+def extract_official_sources(flow_responses: Any, relevance_text: str = "") -> list[SourceItem]:
     if not isinstance(flow_responses, list):
         return []
 
     sources: list[SourceItem] = []
     seen_urls: set[str] = set()
+    seen_titles: set[str] = set()
     for response in flow_responses:
         if not isinstance(response, dict):
             continue
@@ -82,19 +177,25 @@ def extract_official_sources(flow_responses: Any) -> list[SourceItem]:
             if not isinstance(quote, dict):
                 continue
             url = _source_url(quote)
-            if not url or url in seen_urls:
+            if not url or url in seen_urls or not _is_relevant_source(quote, relevance_text):
+                continue
+            title = _source_title(quote, url)
+            title_key = re.sub(r"\W+", "", title.lower())
+            if title_key and title_key in seen_titles:
                 continue
             seen_urls.add(url)
+            if title_key:
+                seen_titles.add(title_key)
             sources.append(
                 SourceItem(
-                    title=_source_title(quote, url),
+                    title=title,
                     url=url,
                     department=quote.get("department") if isinstance(quote.get("department"), str) else None,
                     publishedAt=quote.get("publishedAt") if isinstance(quote.get("publishedAt"), str) else None,
                     lastVerifiedAt=quote.get("lastVerifiedAt") if isinstance(quote.get("lastVerifiedAt"), str) else None,
                 )
             )
-    return sources
+    return filter_source_items(sources, relevance_text)
 
 
 def extract_fallback_answer(flow_responses: Any) -> str:
@@ -206,6 +307,7 @@ class FastGPTClient:
         )
 
         answer_emitted = False
+        answer_context_parts: list[str] = []
         try:
             async with httpx.AsyncClient(
                 timeout=timeout,
@@ -231,15 +333,20 @@ class FastGPTClient:
                     data_lines: list[str] = []
                     async for line in response.aiter_lines():
                         if line == "":
-                            async for event in self._translate_event(event_name, data_lines):
+                            relevance_text = f"{message}\n{''.join(answer_context_parts)}"
+                            async for event in self._translate_event(event_name, data_lines, relevance_text):
                                 if event.event == "fallback_answer":
                                     text = event.data.get("text")
                                     if not answer_emitted and isinstance(text, str) and text:
                                         answer_emitted = True
+                                        answer_context_parts.append(text)
                                         yield FastGPTEvent(event="delta", data={"text": text})
                                     continue
                                 if event.event == "delta":
                                     answer_emitted = True
+                                    text = event.data.get("text")
+                                    if isinstance(text, str):
+                                        answer_context_parts.append(text)
                                 yield event
                             event_name = "message"
                             data_lines = []
@@ -250,15 +357,20 @@ class FastGPTClient:
                             data_lines.append(line[5:].lstrip())
 
                     if data_lines:
-                        async for event in self._translate_event(event_name, data_lines):
+                        relevance_text = f"{message}\n{''.join(answer_context_parts)}"
+                        async for event in self._translate_event(event_name, data_lines, relevance_text):
                             if event.event == "fallback_answer":
                                 text = event.data.get("text")
                                 if not answer_emitted and isinstance(text, str) and text:
                                     answer_emitted = True
+                                    answer_context_parts.append(text)
                                     yield FastGPTEvent(event="delta", data={"text": text})
                                 continue
                             if event.event == "delta":
                                 answer_emitted = True
+                                text = event.data.get("text")
+                                if isinstance(text, str):
+                                    answer_context_parts.append(text)
                             yield event
         except FastGPTUpstreamError:
             raise
@@ -271,6 +383,7 @@ class FastGPTClient:
         self,
         event_name: str,
         data_lines: list[str],
+        relevance_text: str = "",
     ) -> AsyncIterator[FastGPTEvent]:
         if not data_lines:
             return
@@ -292,8 +405,9 @@ class FastGPTClient:
             return
 
         if event_name == "flowResponses":
-            sources = extract_official_sources(payload)
             fallback_answer = extract_fallback_answer(payload)
+            source_context = f"{relevance_text}\n{fallback_answer}"
+            sources = extract_official_sources(payload, source_context)
             if fallback_answer:
                 yield FastGPTEvent(event="fallback_answer", data={"text": fallback_answer})
             yield FastGPTEvent(

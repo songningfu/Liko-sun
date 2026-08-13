@@ -30,7 +30,7 @@ from .auth import (
 from .auth_routes import auth_payload, router as auth_router
 from .config import Settings, get_settings
 from .database import Database, get_database, utc_now
-from .fastgpt import FastGPTClient, FastGPTUpstreamError
+from .fastgpt import FastGPTClient, FastGPTUpstreamError, filter_source_items
 from .memory import (
     LongTermMemoryStore,
     MemoryNotFoundError,
@@ -559,8 +559,16 @@ async def chat_stream(
                     answer_parts.append(text)
             elif upstream_event.event == "sources":
                 items = upstream_event.data.get("items", [])
-                source_items = items if isinstance(items, list) else []
+                source_items = [
+                    item.model_dump(by_alias=True)
+                    for item in filter_source_items(
+                        items if isinstance(items, list) else [],
+                        f"{payload.message}\n{''.join(answer_parts)}",
+                    )
+                ]
                 source_count = len(source_items)
+                yield ServerSentEvent(event="sources", data={"items": source_items})
+                continue
             yield ServerSentEvent(event=upstream_event.event, data=upstream_event.data)
     except FastGPTUpstreamError as error:
         yield ServerSentEvent(event="error", data={"message": str(error), "retryable": True})
@@ -655,12 +663,17 @@ async def conversation_messages(
     except LookupError as error:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
     result = []
+    latest_user_message = ""
     for message in messages:
+        if message.role == "user":
+            latest_user_message = message.content
         try:
             raw_sources = json.loads(message.sources_json or "[]")
             sources = [SourceItem.model_validate(item) for item in raw_sources if isinstance(item, dict)]
         except (json.JSONDecodeError, ValueError, TypeError):
             sources = []
+        if message.role == "assistant" and sources:
+            sources = filter_source_items(sources, f"{latest_user_message}\n{message.content}")
         try:
             raw_attachments = json.loads(message.attachments_json or "[]")
             attachments = [

@@ -10,6 +10,7 @@ from app.fastgpt import (
     FastGPTUpstreamError,
     extract_fallback_answer,
     extract_official_sources,
+    filter_source_items,
 )
 
 
@@ -77,6 +78,54 @@ def test_extract_official_sources_filters_and_deduplicates() -> None:
     assert sources[0].title == "校园卡服务"
     assert sources[0].department == "信息中心"
     assert sources[1].url == "https://www1.szu.edu.cn/v.asp?id=191"
+
+
+def test_extract_official_sources_removes_unrelated_topics_and_duplicate_titles() -> None:
+    sources = extract_official_sources(
+        [
+            {
+                "quoteList": [
+                    {
+                        "title": "图书馆开放时间",
+                        "a": "丽湖馆三楼 B301、C301 学习空间开放至 23:30。",
+                        "url": "https://lib.szu.edu.cn/services/hours",
+                    },
+                    {
+                        "title": "餐厅营业安排",
+                        "a": "丽湖校区餐厅三楼供应时间以现场通知为准；页面导航还包含图书馆服务。",
+                        "url": "https://hqb.szu.edu.cn/dining/hours",
+                    },
+                    {
+                        "title": "校园卡与网络",
+                        "a": "校园卡挂失和校园网使用说明。",
+                        "url": "https://its.szu.edu.cn/card/network",
+                    },
+                    {
+                        "title": "图书馆开放时间",
+                        "a": "另一条重复标题。",
+                        "url": "https://lib.szu.edu.cn/services/other-hours",
+                    },
+                ]
+            }
+        ],
+        relevance_text="那三楼呢？丽湖图书馆三楼书库和自修空间几点关门？",
+    )
+
+    assert [source.url for source in sources] == ["https://lib.szu.edu.cn/services/hours"]
+
+
+def test_filter_source_items_uses_visible_title_as_final_topic_guard() -> None:
+    items = filter_source_items(
+        [
+            {"title": "图书馆服务", "url": "https://lib.szu.edu.cn/services/hours"},
+            {"title": "校园卡与网络", "url": "https://law.szu.edu.cn/xygk.htm"},
+            {"title": "餐厅营业安排", "url": "https://hqb.szu.edu.cn/dining/hours"},
+            {"title": "图书馆服务", "url": "https://lib.szu.edu.cn/services/duplicate"},
+        ],
+        relevance_text="丽湖图书馆三楼书库和自修室几点关门？",
+    )
+
+    assert [item.url for item in items] == ["https://lib.szu.edu.cn/services/hours"]
 
 
 def test_extract_fallback_answer_only_uses_final_output_nodes() -> None:

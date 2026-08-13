@@ -498,7 +498,7 @@
     .chat-header {
       min-height: 52px;
       display: grid;
-      grid-template-columns: 42px 1fr 42px;
+      grid-template-columns: 42px 1fr 76px;
       align-items: center;
       gap: 8px;
       position: sticky;
@@ -528,10 +528,12 @@
     body:not(.chat-mode) .chat-avatar { view-transition-name: none; }
     body.chat-mode .companion-mascot { view-transition-name: none; }
     .chat-avatar svg { width:31px; height:31px; }
-    .chat-history-button { width:42px; height:42px; padding:0; border:0; border-radius:15px; position:relative; background:transparent; color:inherit; cursor:pointer; }
-    .chat-history-button .chat-avatar { width:38px; height:38px; }
-    .chat-history-badge { width:17px; height:17px; position:absolute; right:-1px; bottom:-1px; border:2px solid var(--paper); border-radius:50%; background:#3b3531; color:white; display:grid; place-items:center; box-shadow:0 3px 8px rgba(55,45,40,.16); }
-    .chat-history-badge svg { width:10px; height:10px; }
+    .chat-history-button { width:76px; height:38px; padding:3px 8px 3px 4px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.74); color:#514a45; display:flex; align-items:center; justify-content:space-between; gap:5px; box-shadow:0 6px 16px rgba(65,52,45,.07); cursor:pointer; }
+    .chat-history-button .chat-avatar { width:28px; height:28px; margin:0; border-width:1px; box-shadow:none; flex:none; }
+    .chat-history-button .chat-avatar svg { width:24px; height:24px; }
+    .chat-history-label { font-size:10px; font-weight:720; white-space:nowrap; }
+    .chat-history-icon { width:13px; height:13px; color:#736b65; flex:none; }
+    .chat-history-button:active { transform:scale(.97); background:#f7f0e9; }
 
     ::view-transition-old(liko-shared) { animation: shared-old 360ms cubic-bezier(.2,.7,.2,1) both; }
     ::view-transition-new(liko-shared) { animation: shared-new 360ms cubic-bezier(.2,.7,.2,1) both; }
@@ -1014,7 +1016,8 @@
           <div class="chat-title"><strong>问 Liko</strong><span>校园里的事，慢慢问</span></div>
           <button class="chat-history-button" id="chatHistoryAction" type="button" aria-label="打开对话记录">
             <span class="chat-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg></span>
-            <span class="chat-history-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg></span>
+            <span class="chat-history-label">记录</span>
+            <svg class="chat-history-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
           </button>
         </header>
 
@@ -1356,8 +1359,8 @@
         const name = authState.user?.username || '你';
         chatGreeting.textContent = `${period}，${name}。今天想从哪件事开始？`;
         chatGreetingNote.textContent = systemState.memoryConfigured && authState.user?.memoryConsent
-          ? '对话自动保存 · 长期记忆已开启'
-          : '登录账号 · 对话自动保存';
+          ? '长期记忆已开启 · 对话在右上角「记录」'
+          : '对话自动保存 · 点右上角「记录」查看';
         if (!systemState.memoryConfigured || !authState.user?.memoryConsent) return;
         try {
           const memories = await apiRequest('/api/users/me/memories?limit=1');
@@ -1530,7 +1533,7 @@
         card.className = 'answer-card';
         const head = document.createElement('header');
         head.className = 'answer-head';
-        head.innerHTML = '<span class="answer-avatar" aria-hidden="true">●</span><div><div class="answer-name">Liko</div><div class="answer-note">已保存的回答</div></div>';
+        head.innerHTML = '<span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg></span><div><div class="answer-name">Liko</div><div class="answer-note">已保存的回答</div></div>';
         const bodyNode = document.createElement('div');
         bodyNode.className = 'answer-body';
         bodyNode.textContent = assistant?.content || '这条回答当时没有完整保存。';

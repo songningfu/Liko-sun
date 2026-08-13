@@ -69,6 +69,54 @@ def test_conversation_history_is_user_owned_and_deletable() -> None:
     assert missing.status_code == 404
 
 
+def test_saved_conversation_filters_old_cross_topic_sources_on_read() -> None:
+    database, user_id = make_database()
+    conversation_id = "chat_old_sources"
+    database.ensure_conversation(user_id=user_id, conversation_id=conversation_id, title="图书馆几点关门？")
+    database.add_chat_message(
+        message_id=str(uuid4()),
+        conversation_id=conversation_id,
+        user_id=user_id,
+        role="user",
+        content="丽湖图书馆三楼几点关门？",
+        source_type="input",
+    )
+    database.add_chat_message(
+        message_id=str(uuid4()),
+        conversation_id=conversation_id,
+        user_id=user_id,
+        role="assistant",
+        content="三楼书库 22:30 关闭。",
+        sources_json=json.dumps(
+            [
+                {"title": "图书馆服务", "url": "https://lib.szu.edu.cn/services/hours"},
+                {"title": "餐厅营业安排", "url": "https://hqb.szu.edu.cn/dining/hours"},
+            ],
+            ensure_ascii=False,
+        ),
+    )
+    app.dependency_overrides[get_database] = lambda: database
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id=user_id, authenticated=True, memory_consent=True
+    )
+    client = TestClient(app)
+    try:
+        response = client.get(f"/api/users/me/conversations/{conversation_id}/messages")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert response.json()[1]["sources"] == [
+        {
+            "title": "图书馆服务",
+            "url": "https://lib.szu.edu.cn/services/hours",
+            "department": None,
+            "publishedAt": None,
+            "lastVerifiedAt": None,
+        }
+    ]
+
+
 def test_recommendations_favor_recent_distinct_user_inputs() -> None:
     now = utc_now()
     rows = [
