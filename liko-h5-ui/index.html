@@ -685,6 +685,42 @@
     .color-picker input { width:100%; height:46px; margin-top:8px; padding:3px; border:0; border-radius:11px; background:white; cursor:pointer; }
     .color-randomize { width:100%; min-height:42px; margin-top:10px; border:1px solid var(--line); border-radius:13px; background:#f6f0e9; color:#5f5752; font-weight:680; cursor:pointer; }
 
+    /* Liko 对我的了解 */
+    .memory-sheet { display:none; position:fixed; inset:0; z-index:100; background:rgba(40,34,31,.2); justify-content:center; }
+    .memory-sheet.is-open { display:flex; }
+    .memory-panel { width:min(100%,430px); min-height:100dvh; background:var(--paper); overflow-y:auto; overscroll-behavior:contain; animation:memory-in 220ms ease-out; }
+    @keyframes memory-in { from { transform:translateX(24px); opacity:.55; } to { transform:translateX(0); opacity:1; } }
+    .memory-header { min-height:67px; padding:calc(10px + env(safe-area-inset-top)) 17px 10px; position:sticky; top:0; z-index:2; border-bottom:1px solid var(--line); background:rgba(251,248,242,.94); backdrop-filter:blur(18px); display:grid; grid-template-columns:42px 1fr 42px; align-items:center; }
+    .memory-back { width:38px; height:38px; padding:0; border:0; border-radius:13px; background:#f3ede6; color:#655d57; display:grid; place-items:center; cursor:pointer; }
+    .memory-back svg { width:20px; height:20px; }
+    .memory-heading { text-align:center; }
+    .memory-heading strong { display:block; font-size:17px; }
+    .memory-heading span { display:block; margin-top:2px; color:var(--muted); font-size:10px; }
+    .memory-body { padding:18px 17px calc(34px + env(safe-area-inset-bottom)); }
+    .memory-status { padding:17px; border:1px solid rgba(226,211,198,.8); border-radius:22px; background:linear-gradient(145deg,#f8e5e0,#f6eee5 62%,#eaf0e6); box-shadow:var(--shadow); }
+    .memory-status-row { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+    .memory-status-copy strong { display:block; font-size:16px; }
+    .memory-status-copy span { display:block; margin-top:5px; color:var(--muted); font-size:11px; line-height:1.55; }
+    .memory-toggle { min-width:72px; min-height:38px; padding:0 13px; border:0; border-radius:999px; background:#3b3531; color:white; font-size:11px; font-weight:750; cursor:pointer; }
+    .memory-toggle.is-off { background:#ebe4dc; color:#6f665f; }
+    .memory-privacy { margin:11px 2px 0; color:#837a74; font-size:10px; line-height:1.6; }
+    .memory-list-head { margin:24px 2px 10px; display:flex; align-items:end; justify-content:space-between; gap:12px; }
+    .memory-list-head strong { font-size:14px; }
+    .memory-list-head span { color:var(--muted); font-size:10px; }
+    .memory-list { display:grid; gap:10px; }
+    .memory-empty { padding:28px 20px; border:1px dashed #ddd1c6; border-radius:20px; background:rgba(255,255,255,.58); color:#8b817a; font-size:12px; line-height:1.7; text-align:center; }
+    .memory-item { padding:14px; border:1px solid var(--line); border-radius:18px; background:var(--card); }
+    .memory-item textarea { width:100%; min-height:68px; padding:0; border:0; outline:0; resize:none; overflow:hidden; background:transparent; color:#423c38; font:inherit; font-size:13px; line-height:1.7; }
+    .memory-item textarea:not([readonly]) { min-height:92px; padding:10px; border:1px solid #ddcfc3; border-radius:12px; background:#fbf7f2; resize:vertical; overflow:auto; }
+    .memory-item-meta { margin-top:8px; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .memory-item-meta span { color:#9a918a; font-size:9px; }
+    .memory-item-actions { display:flex; gap:7px; }
+    .memory-item-actions button { min-height:30px; padding:0 10px; border:1px solid var(--line); border-radius:10px; background:#f5efe8; color:#675f59; font-size:10px; cursor:pointer; }
+    .memory-item-actions .memory-delete { color:#b04e58; }
+    .memory-footer-actions { margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .memory-footer-actions button { min-height:43px; border:1px solid var(--line); border-radius:13px; background:var(--card); color:#655d57; font-weight:680; cursor:pointer; }
+    .memory-footer-actions .memory-clear { color:#b04e58; }
+
     /* 底部导航 */
     .bottom-nav {
       width: min(100%,430px);
@@ -1003,7 +1039,7 @@
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3"/><path d="M5.5 20c.6-4 2.8-6 6.5-6s5.9 2 6.5 6"/></svg></span>个人资料</span><span class="setting-side">未完善 ›</span></button>
         <button class="setting-row" id="changePasswordAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg></span>修改密码</span><span class="setting-side">登录后可用 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 5h14v11H9l-4 3V5Z"/></svg></span>对话记录</span><span class="setting-side">›</span></button>
-        <button class="setting-row" id="memoryConsentAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-4.6 7A4 4 0 0 0 9 17.7V21l3-2 3 2v-3.3A4 4 0 0 0 16.6 10 5 5 0 0 0 12 3Z"/><path d="M9.5 10.5h5M10.5 13.5h3"/></svg></span>长期记忆</span><span class="setting-side" id="memoryConsentSide">登录后开启 ›</span></button>
+        <button class="setting-row" id="memoryConsentAction" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a5 5 0 0 0-4.6 7A4 4 0 0 0 9 17.7V21l3-2 3 2v-3.3A4 4 0 0 0 16.6 10 5 5 0 0 0 12 3Z"/><path d="M9.5 10.5h5M10.5 13.5h3"/></svg></span>Liko 对我的了解</span><span class="setting-side" id="memoryConsentSide">登录后开启 ›</span></button>
         <button class="setting-row shell-action" type="button"><span class="setting-main"><span class="setting-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.5 2.7 7.7 7 10 4.3-2.3 7-5.5 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>偏好与隐私</span><span class="setting-side">›</span></button>
       </section>
       <div class="settings-label">更多</div>
@@ -1072,6 +1108,28 @@
     </form>
   </div>
 
+  <div class="memory-sheet" id="memorySheet" role="dialog" aria-modal="true" aria-labelledby="memoryTitle">
+    <section class="memory-panel">
+      <header class="memory-header">
+        <button class="memory-back" id="closeMemory" type="button" aria-label="返回我的"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div class="memory-heading"><strong id="memoryTitle">Liko 对我的了解</strong><span>你始终可以修改或删除</span></div>
+        <span aria-hidden="true"></span>
+      </header>
+      <div class="memory-body">
+        <section class="memory-status">
+          <div class="memory-status-row">
+            <div class="memory-status-copy"><strong id="memoryStatusTitle">长期记忆已开启</strong><span id="memoryStatusText">聊天后，Liko 会整理对以后陪伴有帮助的信息。</span></div>
+            <button class="memory-toggle" id="memoryToggle" type="button">关闭</button>
+          </div>
+          <p class="memory-privacy">关闭后不再读取或新增，但已有内容会保留，方便你随时查看或删除。校园事实仍只以知识库来源为准。</p>
+        </section>
+        <div class="memory-list-head"><strong>已经了解的你</strong><span id="memoryCount">读取中…</span></div>
+        <div class="memory-list" id="memoryList" aria-live="polite"><div class="memory-empty">正在整理记忆…</div></div>
+        <div class="memory-footer-actions"><button id="refreshMemories" type="button">刷新</button><button class="memory-clear" id="clearMemories" type="button">清空全部</button></div>
+      </div>
+    </section>
+  </div>
+
   <script>
     (() => {
       const body = document.body;
@@ -1091,6 +1149,8 @@
       const sendQuestion = document.getElementById('sendQuestion');
       const feedbackUp = document.querySelector('.feedback-up');
       const feedbackDown = document.querySelector('.feedback-down');
+      const memorySheet = document.getElementById('memorySheet');
+      const memoryList = document.getElementById('memoryList');
       const localApiOrigin = ['127.0.0.1', 'localhost'].includes(location.hostname) ? 'http://127.0.0.1:8001' : '';
       const API_BASE = window.LIKO_API_BASE ?? localApiOrigin;
       let currentPage = 'liko';
@@ -1102,6 +1162,7 @@
       let authMode = 'login';
       let authState = {authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}};
       let systemState = {memoryConfigured:false};
+      let currentMemories = [];
 
       const randomHexColor = () => `#${Math.floor(Math.random() * 0x1000000).toString(16).padStart(6, '0').toUpperCase()}`;
       const colorRgb = value => [1,3,5].map(index => Number.parseInt(value.slice(index, index + 2), 16));
@@ -1227,6 +1288,135 @@
         } catch { /* 记忆不可用时保持自然问候，不打断进入聊天 */ }
       };
 
+      const updateMemoryPanelState = () => {
+        const enabled = Boolean(authState.user?.memoryConsent);
+        document.getElementById('memoryStatusTitle').textContent = enabled ? '长期记忆已开启' : '长期记忆已关闭';
+        document.getElementById('memoryStatusText').textContent = enabled
+          ? '聊天后，Liko 会整理对以后陪伴有帮助的信息。'
+          : 'Liko 不会在聊天中读取或新增长期记忆。';
+        const toggle = document.getElementById('memoryToggle');
+        toggle.textContent = enabled ? '关闭' : '开启';
+        toggle.classList.toggle('is-off', !enabled);
+      };
+
+      const memoryDate = value => {
+        if (!value) return '已保存';
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '已保存' : date.toLocaleDateString('zh-CN', {month:'numeric', day:'numeric'});
+      };
+
+      const resizeMemoryEditor = textarea => {
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.max(68, textarea.scrollHeight)}px`;
+      };
+
+      const renderMemories = items => {
+        currentMemories = items;
+        memoryList.replaceChildren();
+        document.getElementById('memoryCount').textContent = `${items.length} 条`;
+        if (!items.length) {
+          const empty = document.createElement('div');
+          empty.className = 'memory-empty';
+          empty.textContent = authState.user?.memoryConsent
+            ? '还没有形成长期记忆。和 Liko 聊聊你的近况、目标或偏好，它会慢慢了解你。'
+            : '当前没有已保存的长期记忆。';
+          memoryList.append(empty);
+          return;
+        }
+        items.forEach(item => {
+          const card = document.createElement('article');
+          card.className = 'memory-item';
+          const editor = document.createElement('textarea');
+          editor.value = item.text;
+          editor.readOnly = true;
+          editor.maxLength = 2000;
+          editor.setAttribute('aria-label', '记忆内容');
+          editor.addEventListener('input', () => resizeMemoryEditor(editor));
+          const meta = document.createElement('div');
+          meta.className = 'memory-item-meta';
+          const date = document.createElement('span');
+          date.textContent = memoryDate(item.updatedAt || item.createdAt);
+          const actions = document.createElement('div');
+          actions.className = 'memory-item-actions';
+          const edit = document.createElement('button');
+          edit.type = 'button';
+          edit.textContent = '修改';
+          edit.addEventListener('click', async () => {
+            if (editor.readOnly) {
+              editor.readOnly = false;
+              edit.textContent = '保存';
+              editor.focus();
+              editor.setSelectionRange(editor.value.length, editor.value.length);
+              resizeMemoryEditor(editor);
+              return;
+            }
+            const text = editor.value.trim();
+            if (!text) { showToast('记忆内容不能为空'); return; }
+            edit.disabled = true;
+            try {
+              const updated = await apiRequest(`/api/users/me/memories/${encodeURIComponent(item.id)}`, {method:'PATCH', body:JSON.stringify({text})});
+              item.text = updated.text;
+              editor.value = updated.text;
+              editor.readOnly = true;
+              edit.textContent = '修改';
+              date.textContent = '刚刚更新';
+              showToast('这条了解已经更新');
+            } catch (error) { showToast(error.message); }
+            finally { edit.disabled = false; resizeMemoryEditor(editor); }
+          });
+          const remove = document.createElement('button');
+          remove.type = 'button';
+          remove.className = 'memory-delete';
+          remove.textContent = '删除';
+          remove.addEventListener('click', async () => {
+            if (!confirm('确定删除这条记忆吗？删除后无法恢复。')) return;
+            remove.disabled = true;
+            try {
+              await apiRequest(`/api/users/me/memories/${encodeURIComponent(item.id)}`, {method:'DELETE'});
+              renderMemories(currentMemories.filter(memory => memory.id !== item.id));
+              await refreshGreeting();
+              showToast('这条了解已删除');
+            } catch (error) { showToast(error.message); remove.disabled = false; }
+          });
+          actions.append(edit, remove);
+          meta.append(date, actions);
+          card.append(editor, meta);
+          memoryList.append(card);
+          resizeMemoryEditor(editor);
+        });
+      };
+
+      const loadMemories = async () => {
+        document.getElementById('memoryCount').textContent = '读取中…';
+        try { renderMemories(await apiRequest('/api/users/me/memories?limit=100')); }
+        catch (error) {
+          document.getElementById('memoryCount').textContent = '读取失败';
+          memoryList.innerHTML = '<div class="memory-empty">暂时无法读取记忆，请稍后再试。</div>';
+          showToast(error.message);
+        }
+      };
+
+      const openMemoryManager = async () => {
+        if (!authState.authenticated) { openAuth(); return; }
+        if (!systemState.memoryConfigured) { showToast('长期记忆服务尚未启用'); return; }
+        updateMemoryPanelState();
+        memorySheet.classList.add('is-open');
+        await loadMemories();
+      };
+
+      const setMemoryConsent = async enabled => {
+        const toggle = document.getElementById('memoryToggle');
+        toggle.disabled = true;
+        try {
+          const result = await apiRequest('/api/auth/memory-consent', {method:'PATCH', body:JSON.stringify({enabled})});
+          renderAccount({...result, quota:authState.quota});
+          updateMemoryPanelState();
+          await refreshGreeting();
+          showToast(enabled ? '长期记忆已开启' : '长期记忆已关闭，已有内容仍保留');
+        } catch (error) { showToast(error.message); }
+        finally { toggle.disabled = false; }
+      };
+
       const refreshAccount = async () => {
         try {
           const [state, health] = await Promise.all([
@@ -1317,15 +1507,25 @@
         try { await apiRequest('/api/auth/logout', {method:'POST'}); renderAccount({authenticated:false, user:null, companion:null, quota:{limit:10, used:0, remaining:10}}); await refreshAccount(); showToast('已退出登录'); }
         catch (error) { showToast(error.message); }
       });
-      document.getElementById('memoryConsentAction').addEventListener('click', async () => {
-        if (!authState.authenticated) { openAuth(); return; }
-        if (!systemState.memoryConfigured) { showToast('长期记忆服务尚未部署'); return; }
-        const enabled = !authState.user.memoryConsent;
+      document.getElementById('memoryConsentAction').addEventListener('click', openMemoryManager);
+      document.getElementById('closeMemory').addEventListener('click', async () => {
+        memorySheet.classList.remove('is-open');
+        await refreshGreeting();
+      });
+      document.getElementById('memoryToggle').addEventListener('click', () => setMemoryConsent(!authState.user?.memoryConsent));
+      document.getElementById('refreshMemories').addEventListener('click', loadMemories);
+      document.getElementById('clearMemories').addEventListener('click', async () => {
+        if (!currentMemories.length) { showToast('现在没有可以清空的记忆'); return; }
+        if (!confirm('确定清空 Liko 对你的全部了解吗？删除后无法恢复。')) return;
+        const clear = document.getElementById('clearMemories');
+        clear.disabled = true;
         try {
-          const result = await apiRequest('/api/auth/memory-consent', {method:'PATCH', body:JSON.stringify({enabled})});
-          renderAccount({...result, quota:authState.quota});
-          showToast(enabled ? '长期记忆已开启' : '长期记忆已关闭');
+          await apiRequest('/api/users/me/memories', {method:'DELETE'});
+          renderMemories([]);
+          await refreshGreeting();
+          showToast('长期记忆已全部清空');
         } catch (error) { showToast(error.message); }
+        finally { clear.disabled = false; }
       });
       document.getElementById('changePasswordAction').addEventListener('click', () => {
         if (!authState.authenticated) { openAuth(); return; }

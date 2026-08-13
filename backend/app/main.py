@@ -250,11 +250,6 @@ async def current_liko(
 def _require_memory_user(current_user: CurrentUser, memory_store: LongTermMemoryStore) -> str:
     if not current_user.authenticated or not current_user.user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录。")
-    if not current_user.memory_consent:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="请先开启长期记忆。",
-        )
     if not memory_store.configured:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

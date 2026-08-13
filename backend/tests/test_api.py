@@ -244,9 +244,14 @@ def test_guest_cannot_list_memories() -> None:
     assert response.status_code == 401
 
 
-def test_authenticated_user_without_consent_cannot_list_memories() -> None:
+def test_authenticated_user_without_consent_can_still_manage_existing_memories() -> None:
     class FakeMemoryStore:
         configured = True
+
+        async def list_memories(self, user_id, limit):
+            assert user_id == "user_123"
+            assert limit == 50
+            return [MemoryRecord(id="mem_1", text="关闭前保存的记忆")]
 
     app.dependency_overrides[get_current_user] = lambda: CurrentUser(
         user_id="user_123",
@@ -259,7 +264,8 @@ def test_authenticated_user_without_consent_cannot_list_memories() -> None:
     finally:
         app.dependency_overrides.clear()
 
-    assert response.status_code == 403
+    assert response.status_code == 200
+    assert response.json()[0]["text"] == "关闭前保存的记忆"
 
 
 def test_authenticated_user_can_manage_own_memories() -> None:
