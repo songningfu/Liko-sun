@@ -11,7 +11,7 @@ cd 知识工厂
 ./.venv/bin/python server.py
 ```
 
-浏览器访问 `http://127.0.0.1:8020`。部署后由 Nginx 通过 `/admin/` 提供统一管理入口，所有知识工厂 API 都需要管理员会话。首次使用如果没有 `.venv`：
+浏览器访问 `http://127.0.0.1:8020`。测试服务器由 Nginx 通过 `http://43.161.217.43/admin/` 提供统一管理入口，所有知识工厂 API 都需要管理员会话。首次使用如果没有 `.venv`：
 
 ```bash
 python3 -m venv .venv
