@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass, field
 from functools import lru_cache
 import logging
+import os
 from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
@@ -147,6 +148,9 @@ class Mem0MemoryStore:
             try:
                 history_parent = Path(self.settings.mem0_history_db_path).expanduser().parent
                 history_parent.mkdir(parents=True, exist_ok=True)
+                mem0_dir = history_parent / ".mem0"
+                mem0_dir.mkdir(parents=True, exist_ok=True)
+                os.environ.setdefault("MEM0_DIR", str(mem0_dir.resolve()))
                 from mem0 import Memory
 
                 self._client = Memory.from_config(self._config())
