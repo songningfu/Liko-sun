@@ -109,7 +109,8 @@ class FastGPTSync:
         content_hash = _content_hash(chunks)
         with _lock:
             current = _read()["sources"].get(source_id, {})
-            same = next((v for v in current.get("versions", []) if v.get("content_hash") == content_hash), None)
+            same = next((v for v in current.get("versions", [])
+                         if v.get("content_hash") == content_hash and v.get("status") != "failed"), None)
         if same:
             return {**same, "source_id": source_id, "unchanged": True}
 
@@ -149,6 +150,7 @@ class FastGPTSync:
                     "chunks": len(chunks),
                     "status": "failed",
                     "staged_at": _now(),
+                    "metadata": metadata or {},
                 })
                 _write(data)
             raise
@@ -165,6 +167,7 @@ class FastGPTSync:
                 "chunks": len(chunks),
                 "status": "staged",
                 "staged_at": _now(),
+                "metadata": metadata or {},
             }
             entry["versions"].append(version)
             _write(data)

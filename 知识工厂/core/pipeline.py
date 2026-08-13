@@ -15,6 +15,7 @@ from typing import Callable, Iterator
 from . import internal_fetch, settings
 from .fetch import fetch_source
 from .enrichment import KnowledgeEnricher
+from .fastgpt_sync import FastGPTSync
 from .process import CLEAN_ROOT, DATA_ROOT, EXPORT_ROOT, PAGES_ROOT, load_rag_module, process_pages, write_page_markdown
 from .registry import Registry, now_iso
 
@@ -178,10 +179,140 @@ def enrich_documents(docs: list[dict], emit: Callable[[Event], None]) -> None:
             item["model_enrichment"] = {
                 key: result.get(key)
                 for key in ("summary", "topic", "campus", "audience", "department",
-                            "document_type", "published_at", "valid_until", "risk_level", "warnings")
+                            "document_type", "published_at", "valid_until", "risk_level", "facts", "warnings")
             }
         except Exception as exc:  # noqa: BLE001 - 单篇模型失败不能破坏流水线
             emit(_event("enrich", f"△ {item['title']}：模型整理失败（{str(exc)[:100]}）", level="error"))
+
+
+def _sync_chunks(doc: dict) -> list[str]:
+    source = f"来源：{doc.get('url')}" if doc.get("url") else "来源：人工提供资料（已保留原始提交记录）"
+    return [
+        f"# {doc['title']}\n\n{source}\n适用校区：{doc['campus']}\n主题：{doc['topic']}\n\n{chunk['content']}"
+        for chunk in doc["_doc"].chunks
+    ]
+
+
+def _auto_publish_decision(doc: dict, *, model_required: bool) -> tuple[bool, str]:
+    """只允许证据清楚、低风险的官方资料自动上线。其余资料仍可暂存等待审核。"""
+    if str(doc.get("source_id", "")).startswith("TXT-"):
+        return False, "人工投递资料必须先审核"
+    if doc.get("status") != "可导入" or not doc.get("official"):
+        return False, "不是可直接采用的官方资料"
+    if doc.get("trust_level") not in {"authoritative", "institutional"}:
+        return False, "来源可信等级需要人工核验"
+    if doc.get("risk") != "普通":
+        return False, doc.get("risk") or "规则检测到风险"
+
+    enrichment = doc.get("model_enrichment") or {}
+    if model_required and not enrichment:
+        return False, "尚未完成模型辅助核验"
+    warnings = enrichment.get("warnings") or []
+    if isinstance(warnings, str):
+        warnings = [warnings] if warnings.strip() else []
+    risk_level = str(enrichment.get("risk_level") or "").strip().lower()
+    allowed_risks = {"low", "normal", "低", "低风险", "普通", "普通风险"}
+    if warnings:
+        return False, "模型提示存在待核验事项"
+    if model_required and risk_level not in allowed_risks:
+        return False, f"模型风险等级需要核验：{risk_level or '未标注'}"
+    return True, "低风险官方资料"
+
+
+def auto_sync_documents(docs: list[dict], emit: Callable[[Event], None],
+                        sync: FastGPTSync | None = None) -> dict:
+    """把合格文档自动暂存；符合严格规则时尝试发布，训练未完成则交给定时检查。"""
+    config = settings.load()
+    summary = {"staged": 0, "unchanged": 0, "published": 0, "pending": 0, "review": 0, "failed": 0}
+    if not config.get("auto_sync_enabled"):
+        return summary
+    sync = sync or FastGPTSync()
+    if not sync.configured:
+        emit(_event("sync", "已开启自动同步，但 FastGPT 尚未配置", level="error"))
+        summary["failed"] += 1
+        return summary
+
+    candidates = [d for d in docs if d.get("status") in {"可导入", "待核验"} and d.get("_doc")]
+    emit(_event("sync", f"开始检查 {len(candidates)} 篇资料的 FastGPT 版本"))
+    model_required = bool(config.get("model_enrichment_enabled"))
+    for doc in candidates:
+        eligible, reason = _auto_publish_decision(doc, model_required=model_required)
+        metadata = {
+            "sourceId": doc["source_id"],
+            "sourceUrl": doc.get("url", ""),
+            "trustLevel": doc.get("trust_level", ""),
+            "autoPublishEligible": eligible,
+            "autoPublishReason": reason,
+        }
+        try:
+            version = sync.stage(
+                source_id=doc["source_id"], title=doc["title"],
+                chunks=_sync_chunks(doc), metadata=metadata,
+            )
+            summary["unchanged" if version.get("unchanged") else "staged"] += 1
+            if not eligible:
+                summary["review"] += 1
+                emit(_event("sync", f"◐ {doc['title']}：已暂存，等待审核（{reason}）",
+                            source_id=doc["source_id"]))
+                continue
+            if not config.get("auto_publish_enabled") or version.get("status") == "published":
+                summary["pending"] += int(version.get("status") != "published")
+                continue
+            try:
+                sync.promote(source_id=doc["source_id"], collection_id=version["collection_id"])
+                summary["published"] += 1
+                emit(_event("sync", f"✓ {doc['title']}：已自动发布", source_id=doc["source_id"]))
+            except RuntimeError as exc:
+                if "仍在训练" in str(exc):
+                    summary["pending"] += 1
+                    emit(_event("sync", f"… {doc['title']}：已暂存，训练完成后自动发布",
+                                source_id=doc["source_id"]))
+                else:
+                    raise
+        except (RuntimeError, ValueError) as exc:
+            summary["failed"] += 1
+            emit(_event("sync", f"✗ {doc['title']}：自动同步失败（{str(exc)[:120]}）",
+                        source_id=doc["source_id"], level="error"))
+    emit(_event("sync", "FastGPT 自动同步完成", sync_summary=summary))
+    return summary
+
+
+def promote_ready_versions(emit: Callable[[Event], None] | None = None,
+                           sync: FastGPTSync | None = None) -> dict:
+    """周期性检查最新暂存版本，训练完成后自动切换低风险官方资料。"""
+    emit = emit or (lambda event: None)
+    config = settings.load()
+    result = {"published": 0, "training": 0, "failed": 0}
+    if not (config.get("auto_sync_enabled") and config.get("auto_publish_enabled")):
+        return result
+    sync = sync or FastGPTSync()
+    if not sync.configured:
+        return result
+
+    latest: dict[str, dict] = {}
+    for version in sync.list_versions():
+        if version.get("status") == "staged" and version["source_id"] not in latest:
+            latest[version["source_id"]] = version
+    for source_id, version in latest.items():
+        metadata = version.get("metadata") or {}
+        if not metadata.get("autoPublishEligible"):
+            continue
+        try:
+            sync.promote(source_id=source_id, collection_id=version["collection_id"])
+            result["published"] += 1
+            emit(_event("sync", f"✓ {version['title']}：训练完成，已自动发布", source_id=source_id))
+        except RuntimeError as exc:
+            if "仍在训练" in str(exc):
+                result["training"] += 1
+            else:
+                result["failed"] += 1
+                emit(_event("sync", f"✗ {version['title']}：自动发布失败（{str(exc)[:120]}）",
+                            source_id=source_id, level="error"))
+        except (KeyError, ValueError) as exc:
+            result["failed"] += 1
+            emit(_event("sync", f"✗ {version['title']}：自动发布失败（{str(exc)[:120]}）",
+                        source_id=source_id, level="error"))
+    return result
 
 
 def process_and_export_pages(emit: Callable[[Event], None]) -> tuple[list[dict], Path | None]:
@@ -199,6 +330,7 @@ def process_and_export_pages(emit: Callable[[Event], None]) -> tuple[list[dict],
     dropped = len(docs) - ok - review
     emit(_event("process", f"清洗完成：可导入 {ok} 篇，待核验 {review} 篇，技术/重复排除 {dropped} 篇"))
     zip_path = export_fastgpt(docs, emit)
+    auto_sync_documents(docs, emit)
     for d in docs:
         d.pop("_doc", None)
     return docs, zip_path
@@ -250,6 +382,7 @@ def run_pipeline(registry: Registry, only_ids: set[str] | None = None) -> Iterat
             export_events: list[Event] = []
             enrich_documents(all_docs, emit=export_events.append)
             zip_path = export_fastgpt(all_docs, emit=export_events.append)
+            auto_sync_documents(all_docs, emit=export_events.append)
             yield from export_events
             for d in all_docs:
                 d.pop("_doc", None)

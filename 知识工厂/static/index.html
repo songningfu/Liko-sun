@@ -319,7 +319,14 @@
     <div class="panel">
       <h2>大模型辅助整理</h2>
       <label class="switch"><input type="checkbox" id="model-enrichment" style="width:auto"> 对新采集资料自动提取主题、时效、风险和事实证据</label>
-      <p class="muted" style="margin-top:8px">默认关闭，避免意外产生费用。开启后相同原文使用缓存；模型只写辅助标签，不覆盖原文，也不直接决定是否发布。</p>
+      <p class="muted" style="margin-top:8px">相同原文使用缓存；模型只写辅助标签、不覆盖原文。风险提示会阻止自动发布并转入审核。</p>
+    </div>
+    <div class="panel">
+      <h2>FastGPT 自动迭代</h2>
+      <label class="switch"><input type="checkbox" id="auto-sync" style="width:auto"> 加工完成后自动同步到 FastGPT 暂存区</label>
+      <label class="switch" style="margin-top:10px"><input type="checkbox" id="auto-publish" style="width:auto"> 低风险官方资料训练完成后自动发布</label>
+      <p class="muted" style="margin-top:8px">公众号、他人提供、模型警告、费用/时效/联系方式等高风险资料只暂存，仍需人工审核。系统每 10 分钟检查一次训练状态。</p>
+      <div style="margin-top:12px"><button class="btn" onclick="saveSettings()">保存自动化设置</button></div>
     </div>
   </section>
 </main>
@@ -382,6 +389,7 @@ async function loadOverview() {
   $("recent-events").innerHTML =
     `<p>最近导出包：${data.last_export || "暂无"}</p>` +
     `<p>内网会话：${internal.has_session ? "已保存" : "未登录"}　全站搜查：${crawlLabel} ${data.settings.crawl_schedule === "off" ? "" : data.settings.crawl_time}</p>` +
+    `<p>知识库自动迭代：${data.settings.auto_sync_enabled ? (data.settings.auto_publish_enabled ? "暂存并安全发布" : "只自动暂存") : "未开启"}　模型整理：${data.settings.model_enrichment_enabled ? "已开启" : "未开启"}</p>` +
     `<p>流水线状态：${data.running ? "运行中" : "空闲"}</p>`;
   renderLikoSummary(liko);
 }
@@ -560,6 +568,8 @@ async function loadSettings() {
   $("delay").value = s.request_delay_seconds;
   $("login-url").value = s.internal_login_url;
   $("model-enrichment").checked = s.model_enrichment_enabled;
+  $("auto-sync").checked = s.auto_sync_enabled;
+  $("auto-publish").checked = s.auto_publish_enabled;
   const st = await api("/api/internal/status");
   $("login-status").textContent = st.has_session ? `会话已保存；${st.message || ""}` : (st.message || "未登录");
 }
@@ -570,7 +580,9 @@ async function saveSettings() {
       crawl_schedule: $("crawl-schedule").value, crawl_time: $("crawl-time").value,
       crawl_max_pages: parseInt($("crawl-max").value) || 60,
       request_delay_seconds: parseInt($("delay").value) || 2, internal_login_url: $("login-url").value,
-      model_enrichment_enabled: $("model-enrichment").checked }) });
+      model_enrichment_enabled: $("model-enrichment").checked,
+      auto_sync_enabled: $("auto-sync").checked,
+      auto_publish_enabled: $("auto-publish").checked }) });
   $("settings-msg").textContent = "已保存";
 }
 

@@ -17,6 +17,8 @@ DEFAULTS = {
     "request_delay_seconds": 2,        # 相邻请求间隔，沿用采集器约定
     "internal_login_url": "https://ehall.szu.edu.cn/",  # 内网登录入口，可修改
     "model_enrichment_enabled": False, # 仅配置模型密钥后可开启；原文永不覆盖
+    "auto_sync_enabled": False,        # 合格资料加工完成后自动写入 FastGPT 暂存区
+    "auto_publish_enabled": False,     # 仅低风险官方资料在训练完成后自动切换上线
 }
 
 

@@ -25,7 +25,7 @@ from core.enrichment import KnowledgeEnricher
 from core.fastgpt_sync import FastGPTSync
 from core.liko_style import LikoStyleStore
 from core.manual import ManualSubmissionStore
-from core.pipeline import EXPORT_ROOT, run_crawl, run_pipeline
+from core.pipeline import EXPORT_ROOT, promote_ready_versions, run_crawl, run_pipeline
 from core.process import PAGES_ROOT, load_rag_module, process_pages
 from core.registry import Registry
 
@@ -67,6 +67,13 @@ def _run_crawl_thread(max_pages: int, max_depth: int, delay: float) -> None:
     try:
         for event in run_crawl(max_pages=max_pages, max_depth=max_depth, delay=delay):
             _broadcast(event)
+    finally:
+        _run_lock.release()
+
+
+def _run_promote_thread() -> None:
+    try:
+        promote_ready_versions(emit=_broadcast, sync=fastgpt_sync)
     finally:
         _run_lock.release()
 
@@ -121,6 +128,8 @@ class SettingsIn(BaseModel):
     request_delay_seconds: int | None = None
     internal_login_url: str | None = None
     model_enrichment_enabled: bool | None = None
+    auto_sync_enabled: bool | None = None
+    auto_publish_enabled: bool | None = None
 
 
 class CrawlRunIn(BaseModel):
@@ -587,6 +596,8 @@ def patch_settings(payload: SettingsIn) -> dict:
     updates = payload.model_dump(exclude_none=True)
     if "crawl_schedule" in updates and updates["crawl_schedule"] not in {"off", "weekly", "biweekly", "monthly"}:
         raise HTTPException(status_code=400, detail="crawl_schedule 只能是 off / weekly / biweekly / monthly")
+    if updates.get("auto_publish_enabled"):
+        updates["auto_sync_enabled"] = True
     data = settings.save(updates)
     _reschedule(data)
     return data
@@ -629,6 +640,8 @@ def _reschedule(data: dict | None = None) -> None:
             jobs.append((_scheduled_crawl, "interval", {"weeks": 2, "start_date": _next_run_hint(hour, minute)}))
         elif data["crawl_schedule"] == "monthly":
             jobs.append((_scheduled_crawl, "cron", {"day": 1, "hour": hour, "minute": minute}))
+    if data.get("auto_sync_enabled") and data.get("auto_publish_enabled"):
+        jobs.append((_scheduled_promote, "interval", {"minutes": 10}))
     if jobs:
         _scheduler = BackgroundScheduler()
         for func, trigger, kwargs in jobs:
@@ -653,6 +666,11 @@ def _scheduled_crawl() -> None:
         threading.Thread(target=_run_crawl_thread,
                          args=(data["crawl_max_pages"], 3, float(data["request_delay_seconds"])),
                          daemon=True).start()
+
+
+def _scheduled_promote() -> None:
+    if _run_lock.acquire(blocking=False):
+        threading.Thread(target=_run_promote_thread, daemon=True).start()
 
 
 _scheduler = None
