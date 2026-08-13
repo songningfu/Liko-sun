@@ -1,11 +1,15 @@
 import asyncio
 from dataclasses import dataclass, field
 from functools import lru_cache
+import logging
 from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
 
 from .config import Settings, get_settings
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 DEFAULT_MEMORY_INSTRUCTIONS = """
@@ -154,6 +158,13 @@ class Mem0MemoryStore:
         with self._client_lock:
             self._client = None
 
+    def _safe_error(self, operation: str, error: Exception) -> None:
+        message = str(error)
+        for secret in (self.settings.mem0_llm_api_key, self.settings.mem0_embedder_api_key):
+            if secret:
+                message = message.replace(secret, "***")
+        LOGGER.warning("Mem0 %s failed (%s): %s", operation, type(error).__name__, message[:500])
+
     async def _call(self, method: str, *args: Any, **kwargs: Any) -> Any:
         last_error: Exception | None = None
         for attempt in range(2):
@@ -228,6 +239,7 @@ class Mem0MemoryStore:
                 metadata={"conversation_id": conversation_id, "source": "liko_chat"},
             )
         except Exception as error:
+            self._safe_error("write", error)
             raise MemoryServiceError("长期记忆写入失败。") from error
 
     async def remember_fact(self, user_id: str, fact: str, conversation_id: str) -> None:
@@ -240,6 +252,7 @@ class Mem0MemoryStore:
                 infer=False,
             )
         except Exception as error:
+            self._safe_error("explicit write", error)
             raise MemoryServiceError("长期记忆写入失败。") from error
 
     async def list_memories(self, user_id: str, limit: int = 100) -> list[MemoryRecord]:
@@ -253,6 +266,7 @@ class Mem0MemoryStore:
             except TypeError:
                 payload = await self._call("get_all", user_id=user_id)
         except Exception as error:
+            self._safe_error("list", error)
             raise MemoryServiceError("长期记忆读取失败。") from error
         return self._records(payload)
 
