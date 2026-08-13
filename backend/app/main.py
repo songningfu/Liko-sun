@@ -194,17 +194,36 @@ def _rank_recommendations(rows: list[dict], now: datetime) -> list[dict]:
     return selected
 
 
-def _explicit_profile_fact(message: str) -> str | None:
+def _explicit_profile_facts(message: str) -> list[str]:
+    facts: list[str] = []
     match = re.search(
         r"(?:我叫|我的名字是|请叫我)([\u4e00-\u9fffA-Za-z0-9·_-]{1,20})(?:[，。！？!?、]|$)",
         message.strip(),
     )
-    if not match:
-        return None
-    name = match.group(1).strip()
-    if any(word in name for word in ("什么", "啥", "谁", "哪个", "哪一个")):
-        return None
-    return f"用户的名字是{name}。"
+    if match:
+        name = match.group(1).strip()
+        if not any(word in name for word in ("什么", "啥", "谁", "哪个", "哪一个")):
+            facts.append(f"用户的名字是{name}。")
+
+    activity_match = re.search(
+        r"(?:其实)?我(?:最近|现在|目前)?(?:正在|在)"
+        r"([^，。！？!?\n]{0,20}(?:实习|兼职|工作|上班|找工作|备考|考研|写论文|做项目|上课|学车|旅行|旅游|健身|跑步))"
+        r"(?:[，。！？!?]|$)",
+        message.strip(),
+    )
+    if activity_match:
+        activity = activity_match.group(1).strip()
+        question_words = ("什么", "干嘛", "干吗", "做啥", "是不是", "吗")
+        if activity and not any(word in activity for word in question_words):
+            facts.append(f"用户目前在{activity}。")
+    return facts
+
+
+def _explicit_profile_fact(message: str) -> str | None:
+    """Keep the original helper contract for callers and focused unit tests."""
+
+    facts = _explicit_profile_facts(message)
+    return facts[0] if facts else None
 
 
 def _asks_user_name(message: str) -> bool:
@@ -218,6 +237,67 @@ def _name_from_memories(memories: list[str]) -> str | None:
         if match:
             return match.group(1).strip()
     return None
+
+
+def _asks_current_activity(message: str) -> bool:
+    normalized = re.sub(r"[\s，。！？!?、]", "", message)
+    return normalized in {
+        "我在干嘛",
+        "我现在在干嘛",
+        "我最近在干嘛",
+        "我在做什么",
+        "我现在在做什么",
+        "我最近在做什么",
+        "我最近忙什么",
+        "你记得我最近在干嘛吗",
+        "你记得我最近在做什么吗",
+    }
+
+
+def _activity_from_memories(memories: list[str]) -> str | None:
+    for memory in memories:
+        match = re.search(r"用户(?:目前|最近)(正在|在)([^。；;，\n]{1,40})", memory)
+        if match:
+            return f"{match.group(1)}{match.group(2).strip()}"
+    return None
+
+
+def _is_campus_fact_query(message: str) -> bool:
+    """Only campus-fact questions should surface knowledge-base citations."""
+
+    campus_terms = (
+        "深圳大学",
+        "深大",
+        "校园",
+        "校区",
+        "粤海",
+        "沧海",
+        "丽湖",
+        "图书馆",
+        "校园卡",
+        "学生卡",
+        "宿舍",
+        "校历",
+        "放假",
+        "开学",
+        "考试",
+        "教务",
+        "选课",
+        "成绩",
+        "课程",
+        "食堂",
+        "餐厅",
+        "校车",
+        "通勤车",
+        "报到",
+        "学籍",
+        "奖学金",
+        "体育馆",
+        "办事",
+        "补办",
+        "服务点",
+    )
+    return any(term in message for term in campus_terms)
 
 
 _background_tasks: set[asyncio.Task] = set()
@@ -424,7 +504,16 @@ async def chat_stream(
     attachment_context = attachment_processor.build_context(attachments)
     model_message = payload.message
     if attachment_context:
-        model_message = f"{payload.message}\n\n{attachment_context}"
+        model_message = (
+            f"{payload.message}\n\n{attachment_context}\n\n"
+            "[本轮回答要求：只围绕用户的问题和附件中确实可见的内容回答；"
+            "不要主动推荐无关校园地点、服务或通知。]"
+        )
+    elif not _is_campus_fact_query(payload.message):
+        model_message = (
+            f"{payload.message}\n\n"
+            "[本轮回答要求：把这当作自然的陪伴对话，不要为了引用资料而补充无关校园信息。]"
+        )
     attachment_summaries = [{"name": item.name, "kind": item.kind} for item in attachments]
     if current_user.authenticated and current_user.user_id and database:
         try:
@@ -453,8 +542,8 @@ async def chat_stream(
     memory_context: list[str] = []
     explicit_memory_saved: bool | None = None
     if memory_active and current_user.user_id:
-        explicit_fact = _explicit_profile_fact(payload.message)
-        if explicit_fact:
+        explicit_facts = _explicit_profile_facts(payload.message)
+        for explicit_fact in explicit_facts:
             try:
                 await memory_store.remember_fact(current_user.user_id, explicit_fact, conversation_id)
                 memory_context.append(explicit_fact)
@@ -471,7 +560,12 @@ async def chat_stream(
         except MemoryServiceError:
             pass
 
-        if _asks_user_name(payload.message) and not _name_from_memories(memory_context):
+        needs_full_memory_scan = (
+            _asks_user_name(payload.message) and not _name_from_memories(memory_context)
+        ) or (
+            _asks_current_activity(payload.message) and not _activity_from_memories(memory_context)
+        )
+        if needs_full_memory_scan:
             try:
                 all_memories = await memory_store.list_memories(current_user.user_id, 100)
                 memory_context.extend(
@@ -497,8 +591,18 @@ async def chat_stream(
     )
 
     remembered_name = _name_from_memories(memory_context) if _asks_user_name(payload.message) else None
+    remembered_activity = (
+        _activity_from_memories(memory_context) if _asks_current_activity(payload.message) else None
+    )
+    profile_answer = None
     if remembered_name:
-        answer_text = f"你叫{remembered_name}。"
+        profile_answer = f"你叫{remembered_name}。"
+    elif _asks_current_activity(payload.message) and memory_active:
+        profile_answer = (
+            f"你最近{remembered_activity}。" if remembered_activity else "你还没跟我说最近在忙什么。"
+        )
+    if profile_answer:
+        answer_text = profile_answer
         yield ServerSentEvent(event="delta", data={"text": answer_text})
         yield ServerSentEvent(event="sources", data={"items": []})
         if current_user.authenticated and current_user.user_id and database:
@@ -521,7 +625,7 @@ async def chat_stream(
                 "finishReason": "stop",
                 "canRate": True,
                 "sourceCount": 0,
-                "memorySaved": True,
+                "memorySaved": explicit_memory_saved,
             },
         )
         return
@@ -559,13 +663,15 @@ async def chat_stream(
                     answer_parts.append(text)
             elif upstream_event.event == "sources":
                 items = upstream_event.data.get("items", [])
-                source_items = [
-                    item.model_dump(by_alias=True)
-                    for item in filter_source_items(
-                        items if isinstance(items, list) else [],
-                        f"{payload.message}\n{''.join(answer_parts)}",
-                    )
-                ]
+                source_items = []
+                if _is_campus_fact_query(payload.message):
+                    source_items = [
+                        item.model_dump(by_alias=True)
+                        for item in filter_source_items(
+                            items if isinstance(items, list) else [],
+                            f"{payload.message}\n{''.join(answer_parts)}",
+                        )
+                    ]
                 source_count = len(source_items)
                 yield ServerSentEvent(event="sources", data={"items": source_items})
                 continue
@@ -672,8 +778,10 @@ async def conversation_messages(
             sources = [SourceItem.model_validate(item) for item in raw_sources if isinstance(item, dict)]
         except (json.JSONDecodeError, ValueError, TypeError):
             sources = []
-        if message.role == "assistant" and sources:
+        if message.role == "assistant" and sources and _is_campus_fact_query(latest_user_message):
             sources = filter_source_items(sources, f"{latest_user_message}\n{message.content}")
+        elif message.role == "assistant" and sources:
+            sources = []
         try:
             raw_attachments = json.loads(message.attachments_json or "[]")
             attachments = [

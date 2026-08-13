@@ -498,9 +498,9 @@
     .chat-header {
       min-height: 52px;
       display: grid;
-      grid-template-columns: 42px 1fr 76px;
+      grid-template-columns: 36px minmax(0,1fr) 68px;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
       position: sticky;
       top: 0;
       z-index: 8;
@@ -508,9 +508,9 @@
       backdrop-filter: blur(14px);
     }
 
-    .chat-title { text-align:center; }
-    .chat-title strong { display:block; font-size:15px; }
-    .chat-title span { display:block; margin-top:1px; color:var(--muted); font-size:10px; }
+    .chat-title { min-width:0; text-align:center; }
+    .chat-title strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:15px; }
+    .chat-title span { display:block; overflow:hidden; margin-top:1px; color:var(--muted); text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
 
     .chat-avatar {
       width: 38px;
@@ -528,9 +528,9 @@
     body:not(.chat-mode) .chat-avatar { view-transition-name: none; }
     body.chat-mode .companion-mascot { view-transition-name: none; }
     .chat-avatar svg { width:31px; height:31px; }
-    .chat-history-button { width:76px; height:38px; padding:3px 8px 3px 4px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.74); color:#514a45; display:flex; align-items:center; justify-content:space-between; gap:5px; box-shadow:0 6px 16px rgba(65,52,45,.07); cursor:pointer; }
-    .chat-history-button .chat-avatar { width:28px; height:28px; margin:0; border-width:1px; box-shadow:none; flex:none; }
-    .chat-history-button .chat-avatar svg { width:24px; height:24px; }
+    .chat-history-button { width:68px; height:36px; padding:3px 5px 3px 3px; border:1px solid var(--line); border-radius:15px; background:rgba(255,255,255,.8); color:#514a45; display:flex; align-items:center; justify-content:space-between; gap:3px; box-shadow:0 6px 16px rgba(65,52,45,.07); cursor:pointer; }
+    .chat-history-button .chat-avatar { width:26px; height:26px; margin:0; border-width:1px; box-shadow:none; flex:none; }
+    .chat-history-button .chat-avatar svg { width:22px; height:22px; }
     .chat-history-label { font-size:10px; font-weight:720; white-space:nowrap; }
     .chat-history-icon { width:13px; height:13px; color:#736b65; flex:none; }
     .chat-history-button:active { transform:scale(.97); background:#f7f0e9; }
@@ -655,6 +655,7 @@
     .attachment-chip-copy { min-width:0; }
     .attachment-chip-copy strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; }
     .attachment-chip-copy span { display:block; margin-top:1px; color:var(--muted); font-size:8px; }
+    .attachment-chip.is-preparing .attachment-chip-icon,
     .attachment-chip.is-uploading .attachment-chip-icon { animation:attachment-pulse 900ms ease-in-out infinite alternate; }
     .attachment-chip.is-error { border-color:#e8b7b5; background:#fff8f6; }
     @keyframes attachment-pulse { to { opacity:.45; transform:scale(.9); } }
@@ -820,6 +821,9 @@
       .hot-question { min-height:58px; }
       .mine-portrait { width:88px; height:94px; }
       .bottom-nav { gap:20px; padding-left:28px; padding-right:28px; }
+      .chat-header { grid-template-columns:34px minmax(0,1fr) 58px; }
+      .chat-history-button { width:58px; }
+      .chat-history-icon { display:none; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1046,7 +1050,7 @@
           <article class="answer-card" id="answerCard">
             <header class="answer-head">
               <span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/></svg></span>
-              <div><div class="answer-name">Liko</div><div class="answer-note" id="answerNote">已核对校园资料</div></div>
+              <div><div class="answer-name">Liko</div><div class="answer-note" id="answerNote">在这里陪你</div></div>
             </header>
             <div class="answer-body" id="answerBody"></div>
             <footer class="sources is-empty" id="answerSources" aria-label="回答来源">
@@ -1358,14 +1362,7 @@
         }
         const name = authState.user?.username || '你';
         chatGreeting.textContent = `${period}，${name}。今天想从哪件事开始？`;
-        chatGreetingNote.textContent = systemState.memoryConfigured && authState.user?.memoryConsent
-          ? '长期记忆已开启 · 对话在右上角「记录」'
-          : '对话自动保存 · 点右上角「记录」查看';
-        if (!systemState.memoryConfigured || !authState.user?.memoryConsent) return;
-        try {
-          const memories = await apiRequest('/api/users/me/memories?limit=1');
-          if (memories.length) chatGreeting.textContent = `${period}，${name}。上次聊到的事我还记得，今天想接着聊，还是换个话题？`;
-        } catch { /* 记忆不可用时保持自然问候，不打断进入聊天 */ }
+        chatGreetingNote.textContent = '对话会自动保存 · 点右上角「记录」查看';
       };
 
       const updateMemoryPanelState = () => {
@@ -1533,22 +1530,18 @@
         card.className = 'answer-card';
         const head = document.createElement('header');
         head.className = 'answer-head';
-        head.innerHTML = '<span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg></span><div><div class="answer-name">Liko</div><div class="answer-note">已保存的回答</div></div>';
+        head.innerHTML = '<span class="answer-avatar" aria-hidden="true"><svg viewBox="0 0 60 60"><circle cx="30" cy="31" r="24" fill="var(--shell)"/><circle cx="30" cy="31" r="16" fill="var(--skin)"/><circle cx="25" cy="29" r="2" fill="var(--face)"/><circle cx="35" cy="29" r="2" fill="var(--face)"/><path d="M26 36q4 3 8 0" fill="none" stroke="var(--face)" stroke-width="2" stroke-linecap="round"/><path d="M34 8q4-6 8-7" fill="none" stroke="#9b673e" stroke-width="3" stroke-linecap="round"/><path d="M39 8q8-7 14-1-7 7-14 1" fill="#79b864"/></svg></span><div><div class="answer-name">Liko</div><div class="answer-note"></div></div>';
+        head.querySelector('.answer-note').textContent = historyDate(assistant?.createdAt) || '这段对话';
         const bodyNode = document.createElement('div');
         bodyNode.className = 'answer-body';
-        bodyNode.textContent = assistant?.content || '这条回答当时没有完整保存。';
+        renderAnswerTextInto(bodyNode, assistant?.content || '这条回答当时没有完整保存。');
         const sources = document.createElement('footer');
         sources.className = 'sources';
-        (assistant?.sources || []).slice(0, 4).forEach(item => {
-          const link = document.createElement('a');
-          link.className = 'source-link';
-          link.href = item.url;
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
-          link.textContent = item.title || '官方来源';
-          sources.append(link);
-        });
-        if (!(assistant?.sources || []).length) sources.classList.add('is-empty');
+        const sourceTitle = document.createElement('div');
+        sourceTitle.className = 'sources-title';
+        sourceTitle.innerHTML = '<span>参考来源</span><span class="stored-source-count">0 条</span>';
+        sources.append(sourceTitle);
+        populateSources(sources, assistant?.sources || [], sourceTitle.querySelector('.stored-source-count'));
         card.append(head, bodyNode, sources);
         turn.append(user, card);
         return turn;
@@ -1947,10 +1940,9 @@
         answerSources.classList.add('is-empty');
       };
 
-      const renderSources = (items = []) => {
-        clearSources();
+      const safeSourceItems = (items = []) => {
         const seenTitles = new Set();
-        const safeItems = items.filter(item => {
+        return items.filter(item => {
           try {
             const url = new URL(item.url);
             const titleKey = (item.title || url.hostname).trim().toLocaleLowerCase('zh-CN');
@@ -1959,8 +1951,13 @@
             return true;
           } catch { return false; }
         }).slice(0, 4);
-        document.getElementById('sourceCount').textContent = `${safeItems.length} 条`;
-        answerSources.classList.toggle('is-empty', !safeItems.length);
+      };
+
+      const populateSources = (target, items = [], countNode = null) => {
+        target.querySelectorAll('.source-link').forEach(link => link.remove());
+        const safeItems = safeSourceItems(items);
+        if (countNode) countNode.textContent = `${safeItems.length} 条`;
+        target.classList.toggle('is-empty', !safeItems.length);
         safeItems.forEach(item => {
           const link = document.createElement('a');
           link.className = 'source-link';
@@ -1979,8 +1976,14 @@
           arrow.className = 'source-arrow';
           arrow.textContent = '›';
           link.append(copy, arrow);
-          answerSources.append(link);
+          target.append(link);
         });
+        return safeItems.length;
+      };
+
+      const renderSources = (items = []) => {
+        clearSources();
+        return populateSources(answerSources, items, document.getElementById('sourceCount'));
       };
 
       const cleanAnswerText = (value = '') => value
@@ -1998,7 +2001,7 @@
       const formatInlineAnswer = (value) => escapeAnswerHtml(value)
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
-      const renderAnswerText = (value) => {
+      const renderAnswerTextInto = (target, value) => {
         const lines = cleanAnswerText(value).split('\n');
         const blocks = [];
         let paragraph = [];
@@ -2034,14 +2037,16 @@
         });
         flushParagraph();
         flushList();
-        answerBody.innerHTML = blocks.join('');
+        target.innerHTML = blocks.join('');
       };
+
+      const renderAnswerText = value => renderAnswerTextInto(answerBody, value);
 
       const handleStreamEvent = (eventName, data, answerText) => {
         if (eventName === 'meta') {
           currentAnswerId = data.answerId || null;
           conversationId = data.conversationId || conversationId;
-          document.getElementById('answerNote').textContent = data.mode === 'integration_stub' ? '后端联调模式' : '正在核对校园资料';
+          document.getElementById('answerNote').textContent = 'Liko 想一想…';
           if (data.quota) {
             authState.quota = data.quota;
             document.getElementById('quotaCopy').textContent = `${authState.authenticated ? '登录用户' : '游客'}今日剩余 ${data.quota.remaining} / ${data.quota.limit} 次`;
@@ -2049,15 +2054,22 @@
         }
         if (eventName === 'delta') {
           answerText.value += data.text || '';
+          document.getElementById('answerNote').textContent = '慢慢说给你听';
           renderAnswerText(answerText.value);
         }
-        if (eventName === 'sources') renderSources(data.items);
+        if (eventName === 'sources') {
+          answerText.sourceCount = renderSources(data.items);
+        }
         if (eventName === 'done') {
           setFeedbackAvailable(Boolean(data.canRate));
-          if (data.finishReason === 'stop') document.getElementById('answerNote').textContent = '已核对校园资料';
-          if (data.finishReason === 'empty') document.getElementById('answerNote').textContent = '未生成可靠答案';
-          answerTime.textContent = data.finishReason === 'integration_stub' ? '刚刚 · 知识库尚未接入' : '刚刚';
-          if (data.memorySaved === false) showToast('回答已保存，但这次长期记忆未写入，请稍后重试');
+          if (data.finishReason === 'stop') {
+            document.getElementById('answerNote').textContent = answerText.sourceCount
+              ? '顺手找了些资料'
+              : currentTurnAttachments.length ? '看完啦' : '听见啦';
+          }
+          if (data.finishReason === 'empty') document.getElementById('answerNote').textContent = '这次没想好';
+          if (data.finishReason === 'integration_stub') document.getElementById('answerNote').textContent = '还在准备中';
+          answerTime.textContent = '刚刚';
         }
         if (eventName === 'error') {
           const error = new Error(data.message || '问答服务暂时不可用');
@@ -2077,7 +2089,7 @@
         if (!response.body) throw new Error('问答服务没有返回内容');
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        const answerText = {value: ''};
+        const answerText = {value: '', sourceCount: 0};
         let buffer = '';
         while (true) {
           const {value, done} = await reader.read();
@@ -2121,7 +2133,11 @@
           const title = document.createElement('strong');
           title.textContent = item.name;
           const statusText = document.createElement('span');
-          statusText.textContent = item.status === 'uploading' ? '正在读取…' : item.status === 'ready' ? '已加入本轮' : '读取失败';
+          statusText.textContent = item.status === 'preparing'
+            ? 'Liko 正在接过来…'
+            : item.status === 'uploading'
+              ? item.kind === 'image' ? 'Liko 正在看图…' : 'Liko 正在读一读…'
+              : item.status === 'ready' ? '已经看好啦' : '这次没看清';
           copy.append(title, statusText);
           const remove = document.createElement('button');
           remove.type = 'button';
@@ -2132,7 +2148,7 @@
           chip.append(icon, copy, remove);
           attachmentTray.append(chip);
         });
-        const uploading = pendingAttachments.some(item => item.status === 'uploading');
+        const uploading = pendingAttachments.some(item => ['preparing', 'uploading'].includes(item.status));
         attachButton.disabled = isAnswering || uploading || pendingAttachments.length >= 3;
         sendQuestion.disabled = isAnswering || uploading;
       };
@@ -2158,6 +2174,34 @@
         }
       };
 
+      const optimizeImageUpload = async file => {
+        const imageUrl = URL.createObjectURL(file);
+        try {
+          const image = await new Promise((resolve, reject) => {
+            const element = new Image();
+            element.onload = () => resolve(element);
+            element.onerror = () => reject(new Error('无法预处理图片'));
+            element.src = imageUrl;
+          });
+          const maxSide = 1800;
+          if (file.size < 700 * 1024 && Math.max(image.naturalWidth, image.naturalHeight) <= maxSide) return file;
+          const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+          const width = Math.max(1, Math.round(image.naturalWidth * scale));
+          const height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d', {alpha:false});
+          context.fillStyle = '#ffffff';
+          context.fillRect(0, 0, width, height);
+          context.drawImage(image, 0, 0, width, height);
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .86));
+          if (!blob || blob.size >= file.size) return file;
+          const basename = file.name.replace(/\.[^.]+$/, '') || 'liko-image';
+          return new File([blob], `${basename}.jpg`, {type:'image/jpeg', lastModified:file.lastModified});
+        } finally { URL.revokeObjectURL(imageUrl); }
+      };
+
       const uploadAttachment = async file => {
         if (pendingAttachments.length >= 3) { showToast('一次最多添加 3 个附件'); return; }
         if (file.size > 10 * 1024 * 1024) { showToast('单个附件不能超过 10 MB'); return; }
@@ -2168,16 +2212,18 @@
           id: null,
           name: file.name,
           kind: isImage ? 'image' : 'document',
-          status: 'uploading'
+          status: isImage ? 'preparing' : 'uploading'
         };
         pendingAttachments.push(item);
         renderAttachmentTray();
-        const form = new FormData();
-        form.append('file', file, file.name);
         try {
+          const uploadFile = isImage ? await optimizeImageUpload(file) : file;
+          item.status = 'uploading';
+          renderAttachmentTray();
+          const form = new FormData();
+          form.append('file', uploadFile, uploadFile.name);
           const result = await apiRequest('/api/chat/attachments', {method:'POST', body:form});
           item.id = result.id;
-          item.name = result.name;
           item.kind = result.kind;
           item.status = 'ready';
         } catch (error) {
@@ -2190,7 +2236,7 @@
       attachmentInput.addEventListener('change', async () => {
         const files = [...attachmentInput.files].slice(0, Math.max(0, 3 - pendingAttachments.length));
         attachmentInput.value = '';
-        for (const file of files) await uploadAttachment(file);
+        await Promise.all(files.map(uploadAttachment));
       });
 
       const archiveCurrentTurn = () => {
@@ -2225,9 +2271,9 @@
         questionNode.textContent = question;
         appendAttachmentBadges(questionNode, currentTurnAttachments);
         document.getElementById('questionInput').value = '';
-        document.getElementById('answerNote').textContent = '正在连接校园知识库…';
+        document.getElementById('answerNote').textContent = currentTurnAttachments.length ? 'Liko 再看一眼…' : 'Liko 想一想…';
         answerBody.innerHTML = '';
-        answerTime.textContent = '正在回答…';
+        answerTime.textContent = '稍等一下…';
         currentAnswerId = null;
         clearSources();
         setFeedbackAvailable(false);
@@ -2251,10 +2297,10 @@
           await clearPendingAttachments(true);
         } catch (error) {
           if (error.name === 'AbortError') return;
-          document.getElementById('answerNote').textContent = error.isBusinessError ? '知识库暂时不可用' : '连接失败';
-          answerBody.textContent = error.isBusinessError ? error.message : '暂时无法连接校园知识库。你的问题已经保留，可以稍后重试。';
-          answerTime.textContent = '刚刚 · 未生成校园答案';
-          showToast('问答服务暂时不可用');
+          document.getElementById('answerNote').textContent = '这次没接住';
+          answerBody.textContent = error.isBusinessError ? error.message : '刚刚走神了一下。你的问题还在，可以稍后再试一次。';
+          answerTime.textContent = '刚刚';
+          showToast('这次没有回答成功');
         } finally {
           isAnswering = false;
           renderAttachmentTray();
@@ -2272,7 +2318,7 @@
         const readyAttachments = pendingAttachments.filter(item => item.status === 'ready');
         const question = input.value.trim() || (readyAttachments.length ? '请帮我看看这些附件。' : '');
         if (!question) { showToast('先写下你想问的问题'); input.focus(); return; }
-        if (pendingAttachments.some(item => item.status === 'uploading')) { showToast('附件还在读取，请稍等'); return; }
+        if (pendingAttachments.some(item => ['preparing', 'uploading'].includes(item.status))) { showToast('Liko 还在看附件，再等一下'); return; }
         if (pendingAttachments.some(item => item.status === 'error')) { showToast('请先移除读取失败的附件'); return; }
         useQuestion(question, 'input', readyAttachments);
       });

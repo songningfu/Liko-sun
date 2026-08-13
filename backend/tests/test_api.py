@@ -7,8 +7,12 @@ from app.attachments import AttachmentRecord
 from app.config import Settings, get_settings
 from app.fastgpt import FastGPTEvent
 from app.main import (
+    _activity_from_memories,
+    _asks_current_activity,
     _asks_user_name,
     _explicit_profile_fact,
+    _explicit_profile_facts,
+    _is_campus_fact_query,
     _name_from_memories,
     app,
     get_attachment_processor,
@@ -317,6 +321,103 @@ def test_explicit_name_profile_is_parsed_and_recalled_without_campus_rag() -> No
 
     assert response.status_code == 200
     assert any(item.get("text") == "你叫小荔。" for item in parse_sse_data(response.text))
+    assert '"sourceCount": 0' in response.text
+
+
+def test_explicit_activity_is_saved_and_recalled_across_conversations() -> None:
+    assert _explicit_profile_fact("我在实习。") == "用户目前在实习。"
+    assert _explicit_profile_facts("我叫小荔，我最近在腾讯实习。") == [
+        "用户的名字是小荔。",
+        "用户目前在腾讯实习。",
+    ]
+    assert _asks_current_activity("我最近在干嘛？") is True
+    assert _activity_from_memories(["用户目前在腾讯实习。"]) == "在腾讯实习"
+
+    class FakeMemoryStore:
+        configured = True
+
+        async def search(self, user_id, query, limit):
+            assert (user_id, query, limit) == ("user_123", "我最近在干嘛？", 5)
+            return []
+
+        async def list_memories(self, user_id, limit):
+            assert (user_id, limit) == ("user_123", 100)
+            return [MemoryRecord(id="mem_activity", text="用户目前在腾讯实习。")]
+
+    class FakeFastGPTClient:
+        async def stream_chat(self, **kwargs):
+            raise AssertionError("明确的近况回忆不应交给校园知识库")
+            yield
+
+    configured = Settings(
+        _env_file=None,
+        fastgpt_base_url="https://rag.example.com/api",
+        fastgpt_api_key="test-only-key",
+        fastgpt_app_id="app_test",
+    )
+    app.dependency_overrides[get_settings] = lambda: configured
+    app.dependency_overrides[get_fastgpt_client] = lambda: FakeFastGPTClient()
+    app.dependency_overrides[get_memory_store] = lambda: FakeMemoryStore()
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id="user_123",
+        authenticated=True,
+        memory_consent=True,
+    )
+    try:
+        response = client.post(
+            "/api/chat/stream",
+            json={"requestId": "request-activity-01", "message": "我最近在干嘛？"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert any(item.get("text") == "你最近在腾讯实习。" for item in parse_sse_data(response.text))
+    assert '"sourceCount": 0' in response.text
+
+
+def test_only_campus_fact_questions_are_eligible_for_sources() -> None:
+    assert _is_campus_fact_query("丽湖图书馆几点关门？") is True
+    assert _is_campus_fact_query("我最近在干嘛？") is False
+    assert _is_campus_fact_query("帮我看看这张图片") is False
+
+
+def test_casual_chat_drops_unrelated_campus_sources() -> None:
+    class FakeFastGPTClient:
+        async def stream_chat(self, **kwargs):
+            assert "自然的陪伴对话" in kwargs["message"]
+            yield FastGPTEvent(event="delta", data={"text": "实习辛苦啦，今天还顺利吗？"})
+            yield FastGPTEvent(
+                event="sources",
+                data={
+                    "items": [
+                        {
+                            "title": "校区通勤车安排",
+                            "url": "https://www.szu.edu.cn/bus",
+                            "department": "深圳大学",
+                        }
+                    ]
+                },
+            )
+
+    configured = Settings(
+        _env_file=None,
+        fastgpt_base_url="https://rag.example.com/api",
+        fastgpt_api_key="test-only-key",
+        fastgpt_app_id="app_test",
+    )
+    app.dependency_overrides[get_settings] = lambda: configured
+    app.dependency_overrides[get_fastgpt_client] = lambda: FakeFastGPTClient()
+    try:
+        response = client.post(
+            "/api/chat/stream",
+            json={"requestId": "request-casual-01", "message": "其实我在实习。"},
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    assert not any(item.get("items") for item in parse_sse_data(response.text))
     assert '"sourceCount": 0' in response.text
 
 
