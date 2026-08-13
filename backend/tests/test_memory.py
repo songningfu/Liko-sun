@@ -27,8 +27,9 @@ def test_mem0_configuration_uses_existing_models_and_pgvector() -> None:
 
     assert config["llm"]["config"]["model"] == "deepseek-v4-flash"
     assert config["embedder"]["config"]["model"] == "BAAI/bge-m3"
-    assert config["embedder"]["config"]["embedding_dims"] == 1024
+    assert "embedding_dims" not in config["embedder"]["config"]
     assert config["vector_store"]["provider"] == "pgvector"
+    assert config["vector_store"]["config"]["embedding_model_dims"] == 1024
     assert config["vector_store"]["config"]["collection_name"] == "liko_memories"
     assert "健康、家庭和财务" in config["custom_instructions"]
 

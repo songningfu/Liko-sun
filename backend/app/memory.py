@@ -113,7 +113,6 @@ class Mem0MemoryStore:
                     "model": self.settings.mem0_embedder_model,
                     "api_key": self.settings.mem0_embedder_api_key,
                     "openai_base_url": self.settings.mem0_embedder_base_url,
-                    "embedding_dims": self.settings.mem0_embedding_dims,
                 },
             },
             "vector_store": {
