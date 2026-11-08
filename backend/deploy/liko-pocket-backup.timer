@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Liko Pocket database backup
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+Persistent=true
+Unit=liko-pocket-backup.service
+
+[Install]
+WantedBy=timers.target

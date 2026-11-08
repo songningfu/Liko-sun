@@ -1,0 +1,7 @@
+[Unit]
+Description=Backup independent Liko Pocket records
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/python3 /opt/liko-pocket/backend/scripts/backup_pocket.py --data-dir /opt/liko-pocket/data --backup-dir /opt/liko-pocket/backups/database

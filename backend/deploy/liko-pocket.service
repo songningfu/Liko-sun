@@ -1,0 +1,17 @@
+[Unit]
+Description=Liko Pocket independent cloud application
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/liko-pocket/backend
+EnvironmentFile=/opt/liko-pocket/model.env
+ExecStart=/opt/liko-pocket/backend/.venv/bin/python -m scripts.run_pocket_cloud --data-dir /opt/liko-pocket/data
+UMask=0077
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

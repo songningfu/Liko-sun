@@ -1,5 +1,6 @@
 "use strict";
 const $ = id => document.getElementById(id);
+const apiPrefix = document.querySelector('meta[name="pocket-api-prefix"]')?.content || "";
 const kinds = {note:"随手记", idea:"灵感", task:"待办"};
 let capabilities = {}, busy = false, recording = null, recorderTimer = null, recordedBlob = null, audioUrl = null, editing = null, loadSequence=0;
 let requestId = sessionStorage.getItem("pocket-request-id"), savedDraft = sessionStorage.getItem("pocket-draft") || "";
@@ -10,7 +11,7 @@ function setBusy(value) { busy=value; ["save-button","logout","record-button"].f
 async function api(path, options={}) {
   const controller = new AbortController(), timer=setTimeout(()=>controller.abort(), 45000);
   try {
-    const response = await fetch(path, {...options, credentials:"same-origin", signal:controller.signal, headers:options.body instanceof FormData ? {} : {"Content-Type":"application/json"}});
+    const response = await fetch(apiPrefix + path, {...options, credentials:"same-origin", signal:controller.signal, headers:options.body instanceof FormData ? {} : {"Content-Type":"application/json"}});
     const data=response.status===204 ? null : await response.json();
     if(!response.ok) throw new Error(typeof data.detail==="string" ? data.detail : "请检查输入内容后重试。");
     return data;

@@ -4,6 +4,8 @@
 
 ## 当前接口
 
+独立云端 Pocket 使用 `app.pocket_cloud.create_app()` 与 `scripts.run_pocket_cloud`，部署在 `/opt/liko-pocket`，不导入或替换旧校园主应用。云端采用独立环境、数据库、服务及 Cookie 前缀，入口与验收见 [`pocket-ui/README.md`](pocket-ui/README.md)。
+
 可选的 Liko Pocket 实验默认关闭。已加入 `/api/pocket/status`、`/api/pocket/records` 的创建/列表/修改/删除、`/api/pocket/records/{id}/analyze` 和 `/api/pocket/transcribe`。记录接口复用现有登录会话并按账号隔离；详见 [`pocket-ui/README.md`](pocket-ui/README.md)。本地启动器使用独立 SQLite，不要求配置云服务器、Mem0 或校园知识库。
 
 - `GET /api/health`：服务状态，以及 FastGPT、数据库是否已配置；不会返回密钥内容。
