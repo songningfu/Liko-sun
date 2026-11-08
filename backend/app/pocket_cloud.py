@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
 from sqlalchemy import text
 
 from .auth import GUEST_COOKIE, SESSION_COOKIE, CurrentUser, get_current_user, private_hash
@@ -113,6 +112,7 @@ def create_app(prefix: str = "/liko-pocket", origin: str = "https://songningfu.s
             connection.execute(text("SELECT 1"))
         return {"status": "ok", "service": "Liko Pocket", "database": "ok", "hardwareConnected": False}
 
+    @pocket.get("/index.html", response_class=HTMLResponse, include_in_schema=False)
     @pocket.get("/", response_class=HTMLResponse)
     def home():
         return (ui / "index.html").read_text().replace(
@@ -120,7 +120,12 @@ def create_app(prefix: str = "/liko-pocket", origin: str = "https://songningfu.s
             f'<meta name="pocket-api-prefix" content="{prefix}">',
         )
 
-    pocket.mount("/", StaticFiles(directory=ui, html=True), name="pocket-ui")
+    @pocket.get("/{asset}", include_in_schema=False)
+    def static_asset(asset: str):
+        if asset not in {"app.js", "style.css"}:
+            raise HTTPException(404)
+        return FileResponse(ui / asset)
+
     pocket.add_middleware(PocketBoundary, prefix=prefix, origin=origin)
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     app.mount(prefix, pocket)

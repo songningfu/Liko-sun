@@ -32,6 +32,8 @@ def test_cloud_keeps_its_routes_under_its_own_prefix(cloud):
     assert home.status_code == 200
     assert '<meta name="pocket-api-prefix" content="/liko-pocket">' in home.text
     assert client.get("/liko-pocket/app.js").status_code == 200
+    assert '<meta name="pocket-api-prefix" content="/liko-pocket">' in client.get("/liko-pocket/index.html").text
+    assert client.get("/liko-pocket/README.md").status_code == 404
     assert client.get("/api/auth/me").status_code == 404
     assert client.post("/liko-pocket/api/chat/stream").status_code in {404, 405}
     assert client.get("/liko-pocket/docs").status_code == 404
