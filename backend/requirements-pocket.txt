@@ -1,0 +1,8 @@
+# Local Pocket prototype; Mem0/PostgreSQL/FastGPT are not required to start.
+fastapi==0.139.2
+uvicorn>=0.34,<1
+httpx>=0.28,<0.29
+pydantic-settings==2.14.2
+SQLAlchemy>=2.0.40,<3
+argon2-cffi>=23.1,<26
+python-multipart>=0.0.20,<1

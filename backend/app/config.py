@@ -24,6 +24,15 @@ class Settings(BaseSettings):
     user_daily_limit: int = Field(default=50, ge=1, le=10000)
     admin_api_token: str | None = Field(default=None, repr=False)
 
+    pocket_enabled: bool = False
+    pocket_llm_base_url: str = "https://api.deepseek.com/v1"
+    pocket_llm_api_key: str | None = Field(default=None, repr=False)
+    pocket_llm_model: str = ""
+    pocket_asr_base_url: str = ""
+    pocket_asr_api_key: str | None = Field(default=None, repr=False)
+    pocket_asr_model: str = ""
+    pocket_timeout_seconds: float = Field(default=30, ge=5, le=120)
+
     attachment_dir: str = "data/chat-attachments"
     attachment_ttl_hours: int = Field(default=24, ge=1, le=168)
     attachment_max_bytes: int = Field(default=10 * 1024 * 1024, ge=1024, le=25 * 1024 * 1024)
@@ -107,6 +116,14 @@ class Settings(BaseSettings):
     @property
     def vision_configured(self) -> bool:
         return bool(self.vision_enabled and self.effective_vision_api_key and self.vision_model)
+
+    @property
+    def pocket_llm_configured(self) -> bool:
+        return bool(self.pocket_llm_base_url and self.pocket_llm_api_key and self.pocket_llm_model)
+
+    @property
+    def pocket_asr_configured(self) -> bool:
+        return bool(self.pocket_asr_base_url and self.pocket_asr_api_key and self.pocket_asr_model)
 
 
 @lru_cache

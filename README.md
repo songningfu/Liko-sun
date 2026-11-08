@@ -4,6 +4,8 @@
 
 ## 当前入口
 
+- Liko Pocket 独立实验（2026-11-08 启动）：[`本地原型与启动说明`](backend/pocket-ui/README.md) · [`最小版本与验证计划`](项目文档/Liko-Pocket_最小版本与验证计划.md)。目前没有连接真实硬件；先验证主动记录、关键词找回与原文纠正。
+
 - 跨电脑接续开发指南：[`项目文档/跨电脑接续开发指南.md`](项目文档/跨电脑接续开发指南.md)
 - 手机 H5 UI：[`liko-h5-ui/index.html`](liko-h5-ui/index.html)
 - H5 使用说明：[`liko-h5-ui/README.md`](liko-h5-ui/README.md)

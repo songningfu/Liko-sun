@@ -39,6 +39,7 @@ from .memory import (
     get_memory_store,
 )
 from .quota import QuotaStatus, consume_chat_quota
+from .pocket import router as pocket_router
 from .schemas import (
     ChatRequest,
     AttachmentSummary,
@@ -68,6 +69,7 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Request-ID"],
 )
 app.include_router(auth_router)
+app.include_router(pocket_router)
 
 
 def get_fastgpt_client(

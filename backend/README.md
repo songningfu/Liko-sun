@@ -4,6 +4,8 @@
 
 ## 当前接口
 
+可选的 Liko Pocket 实验默认关闭。已加入 `/api/pocket/status`、`/api/pocket/records` 的创建/列表/修改/删除、`/api/pocket/records/{id}/analyze` 和 `/api/pocket/transcribe`。记录接口复用现有登录会话并按账号隔离；详见 [`pocket-ui/README.md`](pocket-ui/README.md)。本地启动器使用独立 SQLite，不要求配置云服务器、Mem0 或校园知识库。
+
 - `GET /api/health`：服务状态，以及 FastGPT、数据库是否已配置；不会返回密钥内容。
 - `GET /api/admin/summary`：使用后端共享管理令牌读取用户数、有效会话数、今日问答数和集成状态；仅供知识工厂统一后台调用，不返回账号明细或对话正文。
 - `GET /api/auth/me`：读取服务端会话、专属 Liko 与当日剩余额度；游客首次访问时设置匿名 HttpOnly Cookie。

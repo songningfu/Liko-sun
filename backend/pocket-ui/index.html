@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light"><title>Liko Pocket · 随手记住</title>
+  <link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><a class="brand" href="/pocket/">Liko <span>Pocket</span></a><span class="badge">浏览器原型 · 未连接硬件</span></header>
+    <section class="intro"><p class="eyebrow">把突然想到的，留给之后的自己。</p><h1>先记下来，<br>再慢慢整理。</h1><p>灵感、要做的事、想留住的一句话，都可以从这里开始。</p></section>
+    <section id="account" class="card">
+      <div class="section-heading"><h2>开始记录</h2><span class="step">01</span></div>
+      <p class="muted">使用本地账号保存记录，刷新页面后仍能找回。</p>
+      <form id="auth-form"><label>账号<input id="username" autocomplete="username" required minlength="4" maxlength="20" placeholder="4–20 位小写字母、数字或下划线"></label><label>密码<input id="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128" placeholder="至少 8 位"></label><div class="actions"><button type="submit" id="login-button">登录</button><button type="button" class="secondary" id="register-button">创建本地账号</button></div></form>
+      <p id="auth-status" role="status" aria-live="polite"></p>
+      <div id="recovery" hidden><strong>请保存一次性恢复码</strong><p id="recovery-code" class="code"></p><p class="muted">忘记密码时会用到；此处只展示一次。</p><button id="continue-recording" type="button">已保存，开始记录</button></div>
+    </section>
+    <div id="workspace" hidden>
+      <div class="user-bar"><span id="current-user"></span><button id="logout" class="text-button">退出账号</button></div>
+      <section class="card">
+        <div class="section-heading"><h2>记一条</h2><span class="step">01</span></div>
+        <p class="muted" id="capabilities">正在检查记录服务…</p>
+        <label for="note-text" class="sr-only">记录内容</label><textarea id="note-text" rows="5" maxlength="4000" placeholder="例如：周五前把访谈提纲发给老师。"></textarea>
+        <div class="recording-bar"><button id="record-button" class="secondary" disabled>开始录音</button><span id="recording-status" class="muted" role="status">单次最多 60 秒</span></div>
+        <audio id="audio-preview" controls hidden></audio><button id="retry-voice" class="text-button" hidden>重新识别这段录音</button>
+        <div class="actions"><button id="save-button">保存记录</button><span id="save-status" role="status" aria-live="polite"></span></div>
+      </section>
+      <section class="notes-section">
+        <div class="section-heading"><h2>找回之前的想法</h2><span class="step">02</span></div>
+        <form id="search-form" class="search"><label class="sr-only" for="query">搜索记录关键词</label><input id="query" maxlength="100" placeholder="搜索原文关键词，例如「访谈」"><label class="sr-only" for="kind-filter">记录类型</label><select id="kind-filter"><option value="">全部</option><option value="note">随手记</option><option value="idea">灵感</option><option value="task">待办</option></select><button type="submit" class="secondary">查找</button></form>
+        <p id="list-status" role="status" aria-live="polite" class="muted"></p><div id="notes"></div>
+      </section>
+    </div>
+    <footer>主动记录 · 原文可追溯 · 随时修改与删除</footer>
+  </main>
+  <dialog id="edit-dialog"><form id="edit-form"><div class="section-heading"><h2>修改记录</h2><button type="button" id="close-editor" class="text-button">关闭</button></div><label>记录正文<textarea id="edit-text" rows="7" maxlength="4000" required></textarea></label><label>类型<select id="edit-kind"><option value="note">随手记</option><option value="idea">灵感</option><option value="task">待办</option></select></label><p class="muted">保存修改后会清除旧的自动整理结果；初始原文保留在详情中，方便核对。</p><p id="edit-status" role="status"></p><div class="actions"><button id="edit-save" type="submit">保存修改</button><button id="delete-button" type="button" class="danger">删除记录</button></div></form></dialog>
+</body></html>
