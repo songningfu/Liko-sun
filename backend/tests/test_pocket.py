@@ -168,3 +168,29 @@ def test_voice_requires_configuration_and_transcription_is_not_autosaved(pocket)
     assert response.json() == {"text": "这是识别后的原文。", "saved": False}
     assert client.get("/api/pocket/records").json() == []
     assert client.post("/api/pocket/transcribe", files={"file": ("file.txt", b"test", "text/plain")}).status_code == 415
+
+
+def test_config_reuse_reads_only_model_settings(tmp_path, monkeypatch):
+    from scripts.run_pocket import reuse_model_config
+    names = ["POCKET_LLM_BASE_URL", "POCKET_LLM_API_KEY", "POCKET_LLM_MODEL",
+             "POCKET_ASR_BASE_URL", "POCKET_ASR_API_KEY", "POCKET_ASR_MODEL", "DATABASE_URL", "SESSION_SECRET"]
+    for name in names:
+        monkeypatch.delenv(name, raising=False)
+    config = tmp_path / "server.env"
+    config.write_text("MEM0_LLM_BASE_URL=https://example.com/v1\nMEM0_LLM_API_KEY=test-model-key\n"
+                      "MEM0_LLM_MODEL=test-model\nMEM0_EMBEDDER_BASE_URL=https://api.siliconflow.cn/v1\n"
+                      "MEM0_EMBEDDER_API_KEY=test-speech-key\nDATABASE_URL=must-not-copy\nSESSION_SECRET=must-not-copy\n")
+    # Register restoration before the helper writes the environment.
+    for name in names:
+        monkeypatch.setenv(name, "")
+        monkeypatch.delenv(name)
+    reuse_model_config(config, "FunAudioLLM/SenseVoiceSmall")
+    import os
+    assert os.environ["POCKET_LLM_API_KEY"] == "test-model-key"
+    assert os.environ["POCKET_ASR_MODEL"] == "FunAudioLLM/SenseVoiceSmall"
+    assert "DATABASE_URL" not in os.environ
+    assert "SESSION_SECRET" not in os.environ
+    reuse_model_config(config, llm_source="siliconflow", llm_model="Qwen/Qwen2.5-7B-Instruct")
+    assert os.environ["POCKET_LLM_API_KEY"] == "test-speech-key"
+    assert os.environ["POCKET_LLM_BASE_URL"] == "https://api.siliconflow.cn/v1"
+    assert os.environ["POCKET_LLM_MODEL"] == "Qwen/Qwen2.5-7B-Instruct"
