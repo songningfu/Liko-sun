@@ -1,0 +1,16 @@
+[Unit]
+Description=Liko Pocket isolated private preview
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/liko-pocket-preview/backend
+UMask=0077
+ExecStart=/opt/liko/backend/.venv/bin/python -m scripts.run_pocket --port 8012 --data-dir /opt/liko-pocket-preview/data --reuse-config /opt/liko/backend/.env --asr-model FunAudioLLM/SenseVoiceSmall --llm-source siliconflow --llm-model Qwen/Qwen2.5-7B-Instruct
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

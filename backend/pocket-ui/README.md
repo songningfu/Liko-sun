@@ -8,13 +8,15 @@
 
 原 DeepSeek 模型调用返回 HTTP 402（余额不足）；当前预览复用原服务器硅基流动凭据，使用 `FunAudioLLM/SenseVoiceSmall` 做识别、`Qwen/Qwen2.5-7B-Instruct` 做记录整理。密钥仍在服务器，不复制到电脑或 Git。
 
-当前电脑保持预览隧道连接时可访问 `http://localhost:8012/pocket/`。断开后可在已配置 `liko-server` SSH 别名的机器重新连接：
+在已配置 `liko-server` SSH 别名的 Mac 上，双击 [`open_pocket_preview.command`](../scripts/open_pocket_preview.command) 会检查连接、必要时恢复独立后台隧道并打开 `http://localhost:8012/pocket/`。本机另有便利入口 `简历/打开 Liko Pocket.command`。关闭终端或结束开发任务不会主动关闭这个后台连接；电脑重启或长时间断网后重新双击即可。
+
+也可手动重新连接：
 
 ```sh
-ssh -N -L 127.0.0.1:8012:127.0.0.1:8012 liko-server
+ssh -fNT -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:8012:127.0.0.1:8012 liko-server
 ```
 
-这是试用预览，不是公开互联网入口；服务为临时 systemd 单元，服务器重启后需重新启动。真实验证结果见 [`预览验证记录`](../../项目文档/Liko-Pocket_预览验证记录_20261108.md)。
+这是当前 Mac 的私人试用入口，手机或其他电脑不能直接使用这个 localhost 地址。2026-11-08 已将服务器服务改为持久 systemd 单元，异常退出自动恢复、服务器重启自动启动；配置在 [`liko-pocket-preview.service`](../deploy/liko-pocket-preview.service)，适用于当前服务器目录布局。页面仍仅监听服务器回环地址，没有新增公网路由。真实验证结果见 [`预览验证记录`](../../项目文档/Liko-Pocket_预览验证记录_20261108.md)。
 
 ## 本地启动
 
